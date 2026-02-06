@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -178,7 +179,7 @@ fun AppRoot() {
 }
 
 /* =========================================================
-   🎂 Birthdays screen (WITH SEARCH)
+   🎂 Birthdays screen (SEARCH + CLEAR)
    ========================================================= */
 
 @Composable
@@ -201,16 +202,24 @@ fun BirthdaysScreen(
     }
 
     if (selected == null) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Column(modifier = Modifier.fillMaxSize()) {
 
-            // 🔍 Search bar
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Clear search",
+                            modifier = Modifier.clickable {
+                                searchQuery = ""
+                            }
+                        )
+                    }
                 },
                 placeholder = { Text("Search contacts") },
                 singleLine = true,
