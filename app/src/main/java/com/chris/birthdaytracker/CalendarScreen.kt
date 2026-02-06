@@ -1,6 +1,5 @@
 package com.chris.birthdaytracker
 
-import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,16 +11,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import nl.dionsegijn.konfetti.core.models.Shape
+import nl.dionsegijn.konfetti.core.models.Size
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
-import kotlinx.coroutines.delay
+import java.util.concurrent.TimeUnit
 
 /* =========================================================
    📅 Calendar Screen
@@ -134,7 +142,7 @@ private fun CalendarDay(
 }
 
 /* =========================================================
-   🎉 Animated Popup (Entrance Animation)
+   🎉 Animated Popup
    ========================================================= */
 
 @Composable
@@ -183,7 +191,7 @@ private fun AnimatedBirthdayPopup(
 }
 
 /* =========================================================
-   🎂 Celebration Card
+   🎂 Celebration Card (Konfetti)
    ========================================================= */
 
 @Composable
@@ -191,15 +199,6 @@ private fun BirthdayCelebrationCard(
     date: LocalDate,
     contacts: List<ContactModel>
 ) {
-    val glowAlpha by animateFloatAsState(
-        targetValue = 0.35f,
-        animationSpec = infiniteRepeatable(
-            tween(1400),
-            RepeatMode.Reverse
-        ),
-        label = "glow"
-    )
-
     Card(
         modifier = Modifier
             .padding(24.dp)
@@ -213,21 +212,47 @@ private fun BirthdayCelebrationCard(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha),
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                             MaterialTheme.colorScheme.surface
                         )
                     )
                 )
                 .padding(24.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.TopCenter
         ) {
 
+            // 🎊 REAL CONFETTI BURST (FIXED API)
+            KonfettiView(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                parties = listOf(
+                    Party(
+                        speed = 0f,
+                        maxSpeed = 30f,
+                        damping = 0.9f,
+                        spread = 360,
+                        shapes = listOf(Shape.Square, Shape.Circle),
+                        size = listOf(Size.SMALL, Size.MEDIUM), // ✅ FIXED
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary.toArgb(),
+                            MaterialTheme.colorScheme.secondary.toArgb(),
+                            MaterialTheme.colorScheme.tertiary.toArgb()
+                        ),
+                        position = Position.Relative(0.5, 0.0),
+                        emitter = Emitter(
+                            duration = 800,
+                            TimeUnit.MILLISECONDS
+                        ).max(140)
+                    )
+                )
+            )
+
             Column(
+                modifier = Modifier.padding(top = 80.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
-                AnimatedConfettiBurst()
 
                 contacts.forEach { contact ->
                     val age = contact.ageOnDate(date)
@@ -255,66 +280,6 @@ private fun BirthdayCelebrationCard(
                         Text("Born $it")
                     }
                 }
-            }
-        }
-    }
-}
-
-/* =========================================================
-   🎊 Confetti Burst (one-time)
-   ========================================================= */
-
-@Composable
-private fun AnimatedConfettiBurst() {
-    var visible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        delay(1200)
-        visible = false
-    }
-
-    AnimatedVisibility(
-        visible = visible,
-        exit = fadeOut(tween(500))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(140.dp),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            val emojis = listOf("🎉", "🎊", "✨", "🧁", "🎈")
-
-            emojis.forEachIndexed { index, emoji ->
-                val infinite = rememberInfiniteTransition(label = "confetti$index")
-
-                val y by infinite.animateFloat(
-                    initialValue = -20f,
-                    targetValue = 160f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(
-                            durationMillis = 900 + index * 150,
-                            easing = LinearEasing
-                        )
-                    ),
-                    label = "y"
-                )
-
-                val x by infinite.animateFloat(
-                    initialValue = 0f,
-                    targetValue = if (index % 2 == 0) 40f else -40f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(700),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "x"
-                )
-
-                Text(
-                    text = emoji,
-                    style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.offset(x.dp, y.dp)
-                )
             }
         }
     }

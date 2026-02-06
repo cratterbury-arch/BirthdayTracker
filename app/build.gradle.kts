@@ -61,4 +61,7 @@ dependencies {
     // ✅ Glance App Widgets (ONE version only)
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.glance:glance-material3:1.1.1")
+
+    implementation("nl.dionsegijn:konfetti-compose:2.0.2")
+
 }
