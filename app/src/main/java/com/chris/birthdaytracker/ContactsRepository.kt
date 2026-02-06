@@ -1,61 +1,63 @@
 package com.chris.birthdaytracker
 
+import android.content.ContentResolver
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
 import android.provider.ContactsContract
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class ContactsRepository(private val context: Context) {
+class ContactsRepository(
+    private val context: Context
+) {
 
-    private val outputFormatter =
-        DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    private val resolver: ContentResolver = context.contentResolver
+
+    /* =========================================================
+       READ CONTACTS
+       ========================================================= */
 
     fun getContacts(): List<ContactModel> {
         val contacts = mutableListOf<ContactModel>()
 
-        val projection = arrayOf(
-            ContactsContract.Contacts._ID,
-            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
-            ContactsContract.Contacts.PHOTO_THUMBNAIL_URI
+        val cursor = resolver.query(
+            ContactsContract.Data.CONTENT_URI,
+            arrayOf(
+                ContactsContract.Data.CONTACT_ID,
+                ContactsContract.Contacts.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Event.START_DATE,
+                ContactsContract.CommonDataKinds.Event.TYPE,
+                ContactsContract.Contacts.PHOTO_URI
+            ),
+            "${ContactsContract.Data.MIMETYPE} = ? AND ${ContactsContract.CommonDataKinds.Event.TYPE} = ?",
+            arrayOf(
+                ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE,
+                ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()
+            ),
+            null
         )
 
-        // ❗ NOTE: NO phone-number filter anymore
-        context.contentResolver.query(
-            ContactsContract.Contacts.CONTENT_URI,
-            projection,
-            null,
-            null,
-            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY + " ASC"
-        )?.use { cursor ->
+        cursor?.use {
+            val idIndex = it.getColumnIndexOrThrow(ContactsContract.Data.CONTACT_ID)
+            val nameIndex = it.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)
+            val dateIndex = it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Event.START_DATE)
+            val photoIndex = it.getColumnIndexOrThrow(ContactsContract.Contacts.PHOTO_URI)
 
-            val idIndex =
-                cursor.getColumnIndexOrThrow(ContactsContract.Contacts._ID)
-            val nameIndex =
-                cursor.getColumnIndexOrThrow(
-                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY
-                )
-            val photoIndex =
-                cursor.getColumnIndexOrThrow(
-                    ContactsContract.Contacts.PHOTO_THUMBNAIL_URI
-                )
+            while (it.moveToNext()) {
+                val id = it.getLong(idIndex)
+                val name = it.getString(nameIndex) ?: "Unknown"
+                val rawDate = it.getString(dateIndex)
+                val photoUri = it.getString(photoIndex)?.let(Uri::parse)
 
-            while (cursor.moveToNext()) {
-                val contactId = cursor.getLong(idIndex)
-                val name = cursor.getString(nameIndex) ?: continue
-                val photoUriString = cursor.getString(photoIndex)
-
-                val birthday = getBirthday(contactId)
-
-                // Optional: only include contacts that actually have a birthday
-                if (birthday == null) continue
+                val formattedBirthday = rawDate?.let { normalizeBirthday(it) }
 
                 contacts.add(
                     ContactModel(
-                        id = contactId,
+                        id = id,
                         displayName = name,
-                        birthday = birthday,
-                        photoUri = photoUriString?.let { Uri.parse(it) }
+                        birthday = formattedBirthday,
+                        photoUri = photoUri
                     )
                 )
             }
@@ -64,56 +66,91 @@ class ContactsRepository(private val context: Context) {
         return contacts
     }
 
-    private fun getBirthday(contactId: Long): String? {
-        val projection = arrayOf(
-            ContactsContract.CommonDataKinds.Event.START_DATE
-        )
+    /* =========================================================
+       WRITE / UPDATE BIRTHDAY (CRASH-SAFE)
+       ========================================================= */
 
-        val selection =
-            "${ContactsContract.Data.CONTACT_ID} = ? AND " +
-                    "${ContactsContract.Data.MIMETYPE} = ? AND " +
-                    "${ContactsContract.CommonDataKinds.Event.TYPE} = ?"
+    fun updateBirthday(
+        contactId: Long,
+        birthday: String
+    ) {
+        // Expect dd/MM/yyyy
+        val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+        val date = LocalDate.parse(birthday, formatter)
 
-        val selectionArgs = arrayOf(
+        val isoDate = date.format(DateTimeFormatter.ISO_LOCAL_DATE) // yyyy-MM-dd
+
+        val values = ContentValues().apply {
+            put(ContactsContract.CommonDataKinds.Event.START_DATE, isoDate)
+            put(
+                ContactsContract.CommonDataKinds.Event.TYPE,
+                ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY
+            )
+        }
+
+        val where =
+            "${ContactsContract.Data.CONTACT_ID}=? AND " +
+                    "${ContactsContract.Data.MIMETYPE}=? AND " +
+                    "${ContactsContract.CommonDataKinds.Event.TYPE}=?"
+
+        val args = arrayOf(
             contactId.toString(),
             ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE,
             ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()
         )
 
-        context.contentResolver.query(
+        val updated = resolver.update(
             ContactsContract.Data.CONTENT_URI,
-            projection,
-            selection,
-            selectionArgs,
-            null
-        )?.use { cursor ->
-            if (cursor.moveToFirst()) {
-                val rawDate = cursor.getString(0) ?: return null
-                return normalizeDate(rawDate)
-            }
-        }
+            values,
+            where,
+            args
+        )
 
-        return null
+        // If no existing birthday row, insert a new one
+        if (updated == 0) {
+            val insertValues = ContentValues().apply {
+                put(ContactsContract.Data.CONTACT_ID, contactId)
+                put(
+                    ContactsContract.Data.MIMETYPE,
+                    ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE
+                )
+                put(
+                    ContactsContract.CommonDataKinds.Event.TYPE,
+                    ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY
+                )
+                put(ContactsContract.CommonDataKinds.Event.START_DATE, isoDate)
+            }
+
+            resolver.insert(
+                ContactsContract.Data.CONTENT_URI,
+                insertValues
+            )
+        }
     }
 
-    private fun normalizeDate(raw: String): String? {
+    /* =========================================================
+       DATE NORMALISATION
+       ========================================================= */
+
+    private fun normalizeBirthday(raw: String): String? {
         return try {
             when {
-                raw.length == 10 -> {
+                raw.length == 10 && raw.contains("-") -> {
                     // yyyy-MM-dd
                     val date = LocalDate.parse(raw)
-                    outputFormatter.format(date)
+                    date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 }
-
-                raw.length == 5 -> {
+                raw.length == 5 && raw.contains("-") -> {
                     // MM-dd (no year)
-                    val date = LocalDate.parse("2000-$raw")
-                    outputFormatter.format(date)
+                    val parts = raw.split("-")
+                    val month = parts[0].padStart(2, '0')
+                    val day = parts[1].padStart(2, '0')
+                    "$day/$month/1900"
                 }
-
+                raw.length == 10 && raw.contains("/") -> raw
                 else -> null
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

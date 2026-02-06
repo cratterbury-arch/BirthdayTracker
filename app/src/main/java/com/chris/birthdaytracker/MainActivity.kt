@@ -1,6 +1,7 @@
 package com.chris.birthdaytracker
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -23,12 +24,20 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
-import android.content.pm.PackageManager
+import java.time.LocalDate
+
+/* =========================================================
+   Bottom Tabs
+   ========================================================= */
 
 enum class BottomTab {
     Birthdays,
     Calendar
 }
+
+/* =========================================================
+   Activity
+   ========================================================= */
 
 class MainActivity : ComponentActivity() {
 
@@ -51,7 +60,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /* =========================================================
-   🔐 Permission Gate (CRITICAL)
+   🔐 CONTACTS PERMISSION GATE (READ + WRITE)
    ========================================================= */
 
 @Composable
@@ -60,7 +69,7 @@ fun ContactsPermissionGate(
 ) {
     val context = LocalContext.current
 
-    var hasPermission by remember {
+    var hasRead by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
                 context,
@@ -69,27 +78,45 @@ fun ContactsPermissionGate(
         )
     }
 
-    val permissionLauncher =
+    var hasWrite by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.WRITE_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val launcher =
         rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
-            hasPermission = granted
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { result ->
+            hasRead = result[Manifest.permission.READ_CONTACTS] == true
+            hasWrite = result[Manifest.permission.WRITE_CONTACTS] == true
         }
 
     LaunchedEffect(Unit) {
-        if (!hasPermission) {
-            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        if (!hasRead || !hasWrite) {
+            launcher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.WRITE_CONTACTS
+                )
+            )
         }
     }
 
-    if (hasPermission) {
+    if (hasRead && hasWrite) {
         content()
     } else {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text("Please allow contacts access to continue")
+            Text(
+                text = "Please allow Contacts permission to continue",
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
@@ -107,12 +134,17 @@ fun AppRoot() {
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var selected by remember { mutableStateOf<ContactModel?>(null) }
 
-    LaunchedEffect(Unit) {
+    fun refreshContacts() {
+        val today = LocalDate.now()
         contacts = repository.getContacts()
-            .sortedBy { it.daysUntilBirthday() ?: Long.MAX_VALUE }
+            .sortedBy { it.daysUntilBirthday(today) ?: Long.MAX_VALUE }
     }
 
-    // 🔙 Handle back gesture when editing
+    LaunchedEffect(Unit) {
+        refreshContacts()
+    }
+
+    // Handle back when editing
     BackHandler(enabled = selected != null) {
         selected = null
     }
@@ -138,15 +170,16 @@ fun AppRoot() {
 
         Box(modifier = Modifier.padding(padding)) {
             when (currentTab) {
+
                 BottomTab.Birthdays -> BirthdaysScreen(
                     contacts = contacts,
-                    onSelect = { selected = it },
-                    onRefresh = {
-                        contacts = repository.getContacts()
-                            .sortedBy { it.daysUntilBirthday() ?: Long.MAX_VALUE }
-                    },
                     selected = selected,
-                    onDoneEditing = { selected = null }
+                    onSelect = { selected = it },
+                    onDoneEditing = {
+                        selected = null
+                        refreshContacts()
+                        WidgetRefresher.refresh(context)
+                    }
                 )
 
                 BottomTab.Calendar -> CalendarScreen(
@@ -164,9 +197,8 @@ fun AppRoot() {
 @Composable
 fun BirthdaysScreen(
     contacts: List<ContactModel>,
-    onSelect: (ContactModel) -> Unit,
-    onRefresh: () -> Unit,
     selected: ContactModel?,
+    onSelect: (ContactModel) -> Unit,
     onDoneEditing: () -> Unit
 ) {
     if (selected == null) {
@@ -176,18 +208,16 @@ fun BirthdaysScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(contacts) { contact ->
-                UpcomingBirthdayCard(contact) {
-                    onSelect(contact)
-                }
+                UpcomingBirthdayCard(
+                    contact = contact,
+                    onClick = { onSelect(contact) }
+                )
             }
         }
     } else {
         EditContactScreen(
             contact = selected,
-            onDone = {
-                onDoneEditing()
-                onRefresh()
-            }
+            onDone = onDoneEditing
         )
     }
 }
@@ -201,9 +231,12 @@ fun UpcomingBirthdayCard(
     contact: ContactModel,
     onClick: () -> Unit
 ) {
-    val days = contact.daysUntilBirthday()
-    val age = contact.ageOnNextBirthday()
-    val isToday = days == 0L
+    val today = LocalDate.now()
+    val days = contact.daysUntilBirthday(today)
+    val isToday = contact.isBirthdayToday(today)
+    val age =
+        if (isToday) contact.ageToday(today)
+        else contact.ageOnNextBirthday(today)
 
     Card(
         modifier = Modifier
@@ -243,12 +276,11 @@ fun UpcomingBirthdayCard(
                 }
 
                 if (days != null && age != null) {
-                    val label =
-                        if (isToday) "🎉 Today! Turning $age"
-                        else "In $days days · Turning $age"
-
                     Text(
-                        text = label,
+                        text = if (isToday)
+                            "🎉 Today! Turning $age"
+                        else
+                            "In $days days · Turning $age",
                         color = MaterialTheme.colorScheme.primary
                     )
                 }

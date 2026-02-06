@@ -24,7 +24,7 @@ class BirthdayWidget : GlanceAppWidget() {
     ) {
         provideContent {
 
-            val hasContactsPermission =
+            val hasPermission =
                 ContextCompat.checkSelfPermission(
                     context,
                     Manifest.permission.READ_CONTACTS
@@ -36,7 +36,7 @@ class BirthdayWidget : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
-                if (!hasContactsPermission) {
+                if (!hasPermission) {
                     Text(
                         text = "🔒 Open app to allow contacts",
                         style = TextStyle(
@@ -49,8 +49,8 @@ class BirthdayWidget : GlanceAppWidget() {
                 val today = LocalDate.now()
 
                 val contacts = try {
-                    BirthdayRepository.getContactsWithBirthday(context)
-                } catch (e: Exception) {
+                    ContactsRepository(context).getContacts()
+                } catch (_: Exception) {
                     emptyList()
                 }
 
@@ -64,12 +64,12 @@ class BirthdayWidget : GlanceAppWidget() {
                     return@Column
                 }
 
-                // 🎉 Priority 1: Birthday today
-                val todayBirthday = contacts.firstOrNull {
-                    it.isBirthdayOn(today)
+                // 🎉 Priority 1: birthday today
+                val todayContact = contacts.firstOrNull {
+                    it.isBirthdayToday(today)
                 }
 
-                if (todayBirthday != null) {
+                if (todayContact != null) {
                     Text(
                         text = "🎉 Today’s Birthday",
                         style = TextStyle(
@@ -78,15 +78,15 @@ class BirthdayWidget : GlanceAppWidget() {
                     )
 
                     Text(
-                        text = todayBirthday.displayName,
+                        text = todayContact.displayName,
                         style = TextStyle(
                             color = ColorProvider(android.R.color.white)
                         )
                     )
 
-                    todayBirthday.ageToday()?.let {
+                    todayContact.ageToday(today)?.let { age ->
                         Text(
-                            text = "Turning $it",
+                            text = "Turning $age",
                             style = TextStyle(
                                 color = ColorProvider(android.R.color.white)
                             )
@@ -94,7 +94,7 @@ class BirthdayWidget : GlanceAppWidget() {
                     }
 
                 } else {
-                    // ⏭️ Priority 2: Next upcoming birthday
+                    // ⏭️ Next upcoming birthday
                     val next = contacts
                         .mapNotNull { contact ->
                             contact.daysUntilBirthday(today)?.let {
@@ -134,9 +134,9 @@ class BirthdayWidget : GlanceAppWidget() {
                             )
                         )
 
-                        contact.ageOnNextBirthday()?.let {
+                        contact.ageOnNextBirthday(today)?.let { age ->
                             Text(
-                                text = "Turning $it",
+                                text = "Turning $age",
                                 style = TextStyle(
                                     color = ColorProvider(android.R.color.white)
                                 )
