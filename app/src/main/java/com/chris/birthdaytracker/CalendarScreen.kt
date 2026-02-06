@@ -1,167 +1,104 @@
 package com.chris.birthdaytracker
 
-import androidx.compose.foundation.Image
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Today
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.coroutines.delay
 
-private val birthdayFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+/* =========================================================
+   📅 Calendar Screen
+   ========================================================= */
 
 @Composable
 fun CalendarScreen(
     contacts: List<ContactModel>
 ) {
-    val months = generateMonths()
-    val today = LocalDate.now()
-
-    val currentMonthIndex = months.indexOfFirst {
-        it.month == today.month && it.year == today.year
-    }.coerceAtLeast(0)
-
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = currentMonthIndex
-    )
-
-    val scope = rememberCoroutineScope()
-    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
-
-    val isCurrentMonthVisible by remember {
-        derivedStateOf {
-            listState.layoutInfo.visibleItemsInfo.any {
-                it.index == currentMonthIndex
-            }
-        }
+    val months = remember {
+        (-12..12).map { YearMonth.now().plusMonths(it.toLong()) }
     }
 
-    Box {
+    var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+
         LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            itemsIndexed(months) { _, month ->
-                MonthView(
+            items(months) { month ->
+                MonthSection(
                     month = month,
                     contacts = contacts,
-                    today = today,
-                    onDaySelected = { selectedDate = it }
+                    onDateClick = { selectedDate = it }
                 )
             }
         }
 
-        if (!isCurrentMonthVisible) {
-            FloatingActionButton(
-                onClick = {
-                    scope.launch {
-                        listState.animateScrollToItem(currentMonthIndex)
-                    }
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(24.dp)
-            ) {
-                Icon(Icons.Default.Today, contentDescription = "Jump to today")
-            }
-        }
-
         selectedDate?.let { date ->
-            BirthdayDialog(
+            AnimatedBirthdayPopup(
                 date = date,
-                contacts = contacts,
+                contacts = contacts.filter { it.isBirthdayOn(date) },
                 onDismiss = { selectedDate = null }
             )
         }
     }
 }
 
+/* =========================================================
+   📆 Month Section
+   ========================================================= */
+
 @Composable
-fun MonthView(
+private fun MonthSection(
     month: YearMonth,
     contacts: List<ContactModel>,
-    today: LocalDate,
-    onDaySelected: (LocalDate) -> Unit
+    onDateClick: (LocalDate) -> Unit
 ) {
     val firstDay = month.atDay(1)
     val daysInMonth = month.lengthOfMonth()
 
-    val birthdayDays = contacts.mapNotNull { contact ->
-        contact.birthday?.let {
-            val birthDate = LocalDate.parse(it, birthdayFormatter)
-            if (birthDate.month == month.month) birthDate.dayOfMonth else null
-        }
-    }.toSet()
-
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
 
         Text(
-            text = month.month.getDisplayName(TextStyle.FULL, Locale.getDefault()) +
-                    " ${month.year}",
+            text = "${month.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} ${month.year}",
             style = MaterialTheme.typography.titleLarge
         )
 
-        DaysOfWeekHeader()
+        repeat(6) { week ->
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                repeat(7) { dayIndex ->
+                    val dayNumber =
+                        week * 7 + dayIndex + 1 - firstDay.dayOfWeek.value
 
-        val offset = (firstDay.dayOfWeek.value % 7)
-        val totalCells = offset + daysInMonth
-        val rows = (totalCells + 6) / 7
+                    if (dayNumber in 1..daysInMonth) {
+                        val date = month.atDay(dayNumber)
+                        val hasBirthday = contacts.any { it.isBirthdayOn(date) }
 
-        var day = 1
-
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            repeat(rows) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    repeat(7) { column ->
-                        val index = it * 7 + column
-
-                        if (index < offset || day > daysInMonth) {
-                            Spacer(modifier = Modifier.size(40.dp))
-                        } else {
-                            val date = month.atDay(day)
-                            val isToday = date == today
-                            val hasBirthday = birthdayDays.contains(day)
-
-                            DayCell(
-                                day = day,
-                                isToday = isToday,
-                                hasBirthday = hasBirthday,
-                                onClick = {
-                                    if (hasBirthday) onDaySelected(date)
-                                }
-                            )
-                            day++
-                        }
+                        CalendarDay(
+                            day = dayNumber,
+                            hasBirthday = hasBirthday,
+                            onClick = { onDateClick(date) }
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.size(44.dp))
                     }
                 }
             }
@@ -169,160 +106,153 @@ fun MonthView(
     }
 }
 
-@Composable
-fun DaysOfWeekHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach {
-            Text(
-                text = it,
-                modifier = Modifier.width(40.dp),
-                style = MaterialTheme.typography.labelMedium
-            )
-        }
-    }
-}
+/* =========================================================
+   🗓️ Calendar Day
+   ========================================================= */
 
 @Composable
-fun DayCell(
+private fun CalendarDay(
     day: Int,
-    isToday: Boolean,
     hasBirthday: Boolean,
     onClick: () -> Unit
 ) {
-    val bg = when {
-        hasBirthday -> MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-        else -> MaterialTheme.colorScheme.surface
-    }
-
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .clip(MaterialTheme.shapes.small)
-            .background(bg)
-            .border(
-                width = if (isToday) 2.dp else 0.dp,
-                color = if (isToday)
-                    MaterialTheme.colorScheme.primary
+            .size(44.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .background(
+                if (hasBirthday)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                 else
-                    bg,
-                shape = MaterialTheme.shapes.small
+                    Color.Transparent
             )
-            .then(
-                if (hasBirthday) Modifier.clickable { onClick() }
-                else Modifier
-            ),
+            .clickable(enabled = hasBirthday) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = day.toString(),
-            color = if (isToday)
-                MaterialTheme.colorScheme.primary
-            else
-                MaterialTheme.colorScheme.onSurface
-        )
+        Text(day.toString())
     }
 }
 
-fun generateMonths(): List<YearMonth> {
-    val start = YearMonth.now().minusMonths(6)
-    return (0..18).map { start.plusMonths(it.toLong()) }
-}
+/* =========================================================
+   🎉 Animated Popup (Entrance Animation)
+   ========================================================= */
 
 @Composable
-fun BirthdayDialog(
+private fun AnimatedBirthdayPopup(
     date: LocalDate,
     contacts: List<ContactModel>,
     onDismiss: () -> Unit
 ) {
-    val today = LocalDate.now()
-    val isToday = date == today
+    var show by remember { mutableStateOf(false) }
 
-    val birthdays = contacts.filter { contact ->
-        contact.birthday?.let {
-            val birthDate = LocalDate.parse(it, birthdayFormatter)
-            birthDate.dayOfMonth == date.dayOfMonth &&
-                    birthDate.month == date.month
-        } == true
-    }
+    LaunchedEffect(Unit) { show = true }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            tonalElevation = 8.dp,
+    val scale by animateFloatAsState(
+        targetValue = if (show) 1f else 0.7f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "popupScale"
+    )
+
+    val alpha by animateFloatAsState(
+        targetValue = if (show) 1f else 0f,
+        animationSpec = tween(350),
+        label = "popupAlpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
             modifier = Modifier
-                .padding(16.dp)
-                .heightIn(max = 420.dp)   // 🔒 HARD STOP — THIS IS THE FIX
-                .fillMaxWidth()
+                .scale(scale)
+                .alpha(alpha)
         ) {
-            Box {
+            BirthdayCelebrationCard(
+                date = date,
+                contacts = contacts
+            )
+        }
+    }
+}
 
-                // 🎨 Background (now safely constrained)
-                if (isToday) {
-                    Image(
-                        painter = painterResource(R.drawable.birthday_background),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                        alpha = 0.25f
+/* =========================================================
+   🎂 Celebration Card
+   ========================================================= */
+
+@Composable
+private fun BirthdayCelebrationCard(
+    date: LocalDate,
+    contacts: List<ContactModel>
+) {
+    val glowAlpha by animateFloatAsState(
+        targetValue = 0.35f,
+        animationSpec = infiniteRepeatable(
+            tween(1400),
+            RepeatMode.Reverse
+        ),
+        label = "glow"
+    )
+
+    Card(
+        modifier = Modifier
+            .padding(24.dp)
+            .fillMaxWidth(0.9f),
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(12.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primary.copy(alpha = glowAlpha),
+                            MaterialTheme.colorScheme.surface
+                        )
                     )
+                )
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
 
-                    GentleConfettiOverlay(
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
 
-                Column(
-                    modifier = Modifier
-                        .padding(28.dp)
-                        .align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
+                AnimatedConfettiBurst()
 
-                    if (isToday) {
-                        Text(
-                            text = "Happy Birthday 🎉",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary
+                contacts.forEach { contact ->
+                    val age = contact.ageOnDate(date)
+
+                    contact.photoUri?.let {
+                        AsyncImage(
+                            model = it,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(RoundedCornerShape(48.dp))
                         )
                     }
 
-                    birthdays.forEach { contact ->
-                        val age = contact.ageOnNextBirthday(date)
+                    Text(
+                        text = contact.displayName,
+                        style = MaterialTheme.typography.titleLarge
+                    )
 
-                        Text(
-                            text = contact.displayName,
-                            style = MaterialTheme.typography.headlineSmall
-                        )
+                    age?.let {
+                        TurningAgeText(it)
+                    }
 
-                        age?.let {
-                            Text(
-                                text = "Turning $it",
-                                style = MaterialTheme.typography.headlineMedium,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        contact.photoUri?.let {
-                            AsyncImage(
-                                model = it,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .size(96.dp)
-                                    .clip(MaterialTheme.shapes.extraLarge)
-                            )
-                        }
-
-                        contact.birthday?.let {
-                            Text(
-                                text = "Born $it",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                    contact.birthday?.let {
+                        Text("Born $it")
                     }
                 }
             }
@@ -330,31 +260,88 @@ fun BirthdayDialog(
     }
 }
 
-
+/* =========================================================
+   🎊 Confetti Burst (one-time)
+   ========================================================= */
 
 @Composable
-fun GentleConfettiOverlay(
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier.padding(16.dp)) {
-        val confetti = listOf("🎉", "🎊", "🎈", "🎂")
+private fun AnimatedConfettiBurst() {
+    var visible by remember { mutableStateOf(true) }
 
-        confetti.forEachIndexed { index, emoji ->
-            Text(
-                text = emoji,
-                fontSize = 32.sp,
-                modifier = Modifier.align(
-                    when (index) {
-                        0 -> Alignment.TopStart
-                        1 -> Alignment.TopEnd
-                        2 -> Alignment.BottomStart
-                        else -> Alignment.BottomEnd
-                    }
-                ),
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
-            )
+    LaunchedEffect(Unit) {
+        delay(1200)
+        visible = false
+    }
+
+    AnimatedVisibility(
+        visible = visible,
+        exit = fadeOut(tween(500))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            val emojis = listOf("🎉", "🎊", "✨", "🧁", "🎈")
+
+            emojis.forEachIndexed { index, emoji ->
+                val infinite = rememberInfiniteTransition(label = "confetti$index")
+
+                val y by infinite.animateFloat(
+                    initialValue = -20f,
+                    targetValue = 160f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(
+                            durationMillis = 900 + index * 150,
+                            easing = LinearEasing
+                        )
+                    ),
+                    label = "y"
+                )
+
+                val x by infinite.animateFloat(
+                    initialValue = 0f,
+                    targetValue = if (index % 2 == 0) 40f else -40f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(700),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "x"
+                )
+
+                Text(
+                    text = emoji,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.offset(x.dp, y.dp)
+                )
+            }
         }
     }
 }
 
+/* =========================================================
+   💓 Emphasised Turning Age
+   ========================================================= */
 
+@Composable
+private fun TurningAgeText(age: Int) {
+    val infinite = rememberInfiniteTransition(label = "agePulse")
+
+    val scale by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Text(
+        text = "Turning $age",
+        style = MaterialTheme.typography.headlineMedium,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.scale(scale)
+    )
+}

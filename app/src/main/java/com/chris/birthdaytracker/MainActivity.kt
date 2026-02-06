@@ -8,6 +8,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -33,20 +35,15 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 enum class BottomTab {
-    Birthdays,
-    Calendar
+    Birthdays, Calendar
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         setContent {
             BirthdayTrackerTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
+                Surface(modifier = Modifier.fillMaxSize()) {
                     ContactsPermissionGate {
                         AppRoot()
                     }
@@ -56,17 +53,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/* =========================================================
-   🔐 Permission gate
-   ========================================================= */
+/* ---------------------------------------------------------- */
 
 @Composable
-fun ContactsPermissionGate(
-    content: @Composable () -> Unit
-) {
+fun ContactsPermissionGate(content: @Composable () -> Unit) {
     val context = LocalContext.current
 
-    var hasRead by remember {
+    var granted by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
                 context,
@@ -75,25 +68,16 @@ fun ContactsPermissionGate(
         )
     }
 
-    var hasWrite by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.WRITE_CONTACTS
-            ) == PackageManager.PERMISSION_GRANTED
-        )
-    }
-
     val launcher =
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
-        ) { result ->
-            hasRead = result[Manifest.permission.READ_CONTACTS] == true
-            hasWrite = result[Manifest.permission.WRITE_CONTACTS] == true
+        ) {
+            granted = it[Manifest.permission.READ_CONTACTS] == true &&
+                    it[Manifest.permission.WRITE_CONTACTS] == true
         }
 
     LaunchedEffect(Unit) {
-        if (!hasRead || !hasWrite) {
+        if (!granted) {
             launcher.launch(
                 arrayOf(
                     Manifest.permission.READ_CONTACTS,
@@ -103,21 +87,16 @@ fun ContactsPermissionGate(
         }
     }
 
-    if (hasRead && hasWrite) {
-        content()
-    } else {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("Please allow Contacts permission to continue")
-        }
+    if (granted) content()
+    else Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Please allow contacts permission")
     }
 }
 
-/* =========================================================
-   🏠 App root (SWIPE ENABLED)
-   ========================================================= */
+/* ---------------------------------------------------------- */
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -129,53 +108,30 @@ fun AppRoot() {
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var selected by remember { mutableStateOf<ContactModel?>(null) }
 
-    val pagerState = rememberPagerState(
-        initialPage = 0,
-        pageCount = { 2 }
-    )
+    val pagerState = rememberPagerState { 2 }
 
-    fun refreshContactsAndWidget() {
-        val today = LocalDate.now()
+    fun refresh() {
         contacts = repository.getContacts()
-            .sortedBy { it.daysUntilBirthday(today) ?: Long.MAX_VALUE }
-
+            .sortedBy { it.daysUntilBirthday(LocalDate.now()) ?: Long.MAX_VALUE }
         WidgetRefresher.refresh(context)
     }
 
-    LaunchedEffect(Unit) {
-        refreshContactsAndWidget()
-    }
+    LaunchedEffect(Unit) { refresh() }
 
-    DisposableEffect(Unit) {
-        WidgetRefresher.refresh(context)
-        onDispose { }
-    }
-
-    BackHandler(enabled = selected != null) {
-        selected = null
-    }
+    BackHandler(enabled = selected != null) { selected = null }
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
                     selected = pagerState.currentPage == 0,
-                    onClick = {
-                        scope.launch {
-                            pagerState.animateScrollToPage(0)
-                        }
-                    },
+                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
                     icon = { Icon(Icons.Default.Cake, null) },
                     label = { Text("Birthdays") }
                 )
-
                 NavigationBarItem(
                     selected = pagerState.currentPage == 1,
-                    onClick = {
-                        scope.launch {
-                            pagerState.animateScrollToPage(1)
-                        }
-                    },
+                    onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
                     icon = { Icon(Icons.Default.CalendarMonth, null) },
                     label = { Text("Calendar") }
                 )
@@ -196,21 +152,16 @@ fun AppRoot() {
                     onSelect = { selected = it },
                     onDoneEditing = {
                         selected = null
-                        refreshContactsAndWidget()
+                        refresh()
                     }
                 )
-
-                1 -> CalendarScreen(
-                    contacts = contacts
-                )
+                1 -> CalendarScreen(contacts = contacts)
             }
         }
     }
 }
 
-/* =========================================================
-   🎂 Birthdays screen
-   ========================================================= */
+/* ---------------------------------------------------------- */
 
 @Composable
 fun BirthdaysScreen(
@@ -219,64 +170,52 @@ fun BirthdaysScreen(
     onSelect: (ContactModel) -> Unit,
     onDoneEditing: () -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
 
-    val filteredContacts = remember(contacts, searchQuery) {
-        if (searchQuery.isBlank()) contacts
+    val filtered = remember(contacts, query) {
+        if (query.isBlank()) contacts
         else contacts.filter {
-            it.displayName.contains(searchQuery, ignoreCase = true)
+            it.displayName.contains(query, ignoreCase = true)
         }
     }
 
     if (selected == null) {
-        Column(modifier = Modifier.fillMaxSize()) {
-
+        Column {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+                value = query,
+                onValueChange = { query = it },
                 leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
+                    if (query.isNotBlank()) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Clear",
-                            modifier = Modifier.clickable {
-                                searchQuery = ""
-                            }
+                            null,
+                            modifier = Modifier.clickable { query = "" }
                         )
                     }
                 },
-                placeholder = { Text("Search contacts") },
-                singleLine = true,
+                placeholder = { Text("Search") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             )
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredContacts) { contact ->
-                    UpcomingBirthdayCard(
-                        contact = contact,
-                        onClick = { onSelect(contact) }
-                    )
+                items(filtered) {
+                    UpcomingBirthdayCard(it) { onSelect(it) }
                 }
             }
         }
     } else {
-        EditContactScreen(
-            contact = selected,
-            onDone = onDoneEditing
-        )
+        EditContactScreen(contact = selected, onDone = onDoneEditing)
     }
 }
 
-/* =========================================================
-   🧾 Birthday card
-   ========================================================= */
+/* ---------------------------------------------------------- */
+/* 🎉 TODAY PULSE ANIMATION */
 
 @Composable
 fun UpcomingBirthdayCard(
@@ -284,29 +223,41 @@ fun UpcomingBirthdayCard(
     onClick: () -> Unit
 ) {
     val today = LocalDate.now()
-    val days = contact.daysUntilBirthday(today)
     val isToday = contact.isBirthdayToday(today)
+    val days = contact.daysUntilBirthday(today)
     val age =
         if (isToday) contact.ageToday(today)
         else contact.ageOnNextBirthday(today)
 
+    val pulse by animateFloatAsState(
+        targetValue = if (isToday) 1.03f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = pulse
+                scaleY = pulse
+            }
             .clickable { onClick() },
         colors = CardDefaults.cardColors(
             containerColor = if (isToday)
-                MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
             else
                 MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             contact.photoUri?.let {
                 AsyncImage(
                     model = it,
@@ -315,24 +266,16 @@ fun UpcomingBirthdayCard(
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(Modifier.width(16.dp))
 
             Column {
-                Text(
-                    text = contact.displayName,
-                    style = MaterialTheme.typography.bodyLarge
-                )
-
-                contact.birthday?.let {
-                    Text(it)
-                }
+                Text(contact.displayName, style = MaterialTheme.typography.bodyLarge)
+                contact.birthday?.let { Text(it) }
 
                 if (days != null && age != null) {
                     Text(
-                        text = if (isToday)
-                            "🎉 Today! Turning $age"
-                        else
-                            "In $days days · Turning $age",
+                        if (isToday) "🎉 Today! Turning $age"
+                        else "In $days days · Turning $age",
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
