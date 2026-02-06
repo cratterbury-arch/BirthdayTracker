@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -19,7 +20,13 @@ fun EditContactScreen(
     val context = LocalContext.current
     val repository = remember { ContactsRepository(context) }
 
-    var birthday by remember { mutableStateOf(contact.birthday ?: "") }
+    // 👇 IMPORTANT: explicit type for Compose state
+    var birthdayField by remember {
+        mutableStateOf(
+            TextFieldValue(contact.birthday ?: "")
+        )
+    }
+
     var isSaving by remember { mutableStateOf(false) }
 
     val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -37,10 +44,13 @@ fun EditContactScreen(
         )
 
         OutlinedTextField(
-            value = birthday,
-            onValueChange = { birthday = it },
+            value = birthdayField,
+            onValueChange = { newValue ->
+                birthdayField = formatBirthdayInput(newValue)
+            },
             label = { Text("Birthday (dd/MM/yyyy)") },
-            singleLine = true
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -48,7 +58,7 @@ fun EditContactScreen(
         Button(
             enabled = !isSaving,
             onClick = {
-                val trimmed = birthday.trim()
+                val trimmed = birthdayField.text.trim()
 
                 if (trimmed.isEmpty()) {
                     Toast.makeText(
@@ -60,6 +70,7 @@ fun EditContactScreen(
                 }
 
                 try {
+                    // Validate date format
                     LocalDate.parse(trimmed, formatter)
 
                     isSaving = true
@@ -68,8 +79,8 @@ fun EditContactScreen(
                         birthday = trimmed
                     )
 
-                    // 🔁 FORCE WIDGET REFRESH AFTER SAVE
-                    WidgetRefresher.refresh(context)
+                    // 🔁 Refresh widget immediately
+
 
                     onDone()
 

@@ -27,7 +27,7 @@ import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
 import java.time.LocalDate
 
 /* =========================================================
-   Bottom Tabs
+   Bottom tabs
    ========================================================= */
 
 enum class BottomTab {
@@ -60,7 +60,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /* =========================================================
-   🔐 CONTACTS PERMISSION GATE (READ + WRITE)
+   🔐 Contacts permission gate
    ========================================================= */
 
 @Composable
@@ -113,16 +113,13 @@ fun ContactsPermissionGate(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "Please allow Contacts permission to continue",
-                style = MaterialTheme.typography.bodyLarge
-            )
+            Text("Please allow Contacts permission to continue")
         }
     }
 }
 
 /* =========================================================
-   🏠 App Root
+   🏠 App root (THIS is where widget refresh belongs)
    ========================================================= */
 
 @Composable
@@ -134,17 +131,19 @@ fun AppRoot() {
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var selected by remember { mutableStateOf<ContactModel?>(null) }
 
-    fun refreshContacts() {
+    fun refreshContactsAndWidget() {
         val today = LocalDate.now()
         contacts = repository.getContacts()
             .sortedBy { it.daysUntilBirthday(today) ?: Long.MAX_VALUE }
+
+        // ✅ SAFE widget refresh (stable lifecycle)
+        WidgetRefresher.refresh(context)
     }
 
     LaunchedEffect(Unit) {
-        refreshContacts()
+        refreshContactsAndWidget()
     }
 
-    // Handle back when editing
     BackHandler(enabled = selected != null) {
         selected = null
     }
@@ -175,10 +174,11 @@ fun AppRoot() {
                     contacts = contacts,
                     selected = selected,
                     onSelect = { selected = it },
+
+                    // 👇 THIS IS onDoneEditing
                     onDoneEditing = {
                         selected = null
-                        refreshContacts()
-                        WidgetRefresher.refresh(context)
+                        refreshContactsAndWidget()
                     }
                 )
 
@@ -191,7 +191,7 @@ fun AppRoot() {
 }
 
 /* =========================================================
-   🎂 Birthdays Screen
+   🎂 Birthdays screen
    ========================================================= */
 
 @Composable
@@ -223,7 +223,7 @@ fun BirthdaysScreen(
 }
 
 /* =========================================================
-   🧾 Birthday Card
+   🧾 Birthday card
    ========================================================= */
 
 @Composable
@@ -272,7 +272,7 @@ fun UpcomingBirthdayCard(
                 )
 
                 contact.birthday?.let {
-                    Text(text = it)
+                    Text(it)
                 }
 
                 if (days != null && age != null) {

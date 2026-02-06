@@ -1,10 +1,10 @@
 package com.chris.birthdaytracker
 
 import android.content.Context
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import androidx.glance.appwidget.GlanceAppWidgetManager
 
 object WidgetRefresher {
 
