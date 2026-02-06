@@ -227,6 +227,8 @@ fun BirthdayDialog(
     contacts: List<ContactModel>,
     onDismiss: () -> Unit
 ) {
+    val today = LocalDate.now()
+
     val birthdays = contacts.filter { contact ->
         contact.birthday?.let {
             val birthDate = LocalDate.parse(it, birthdayFormatter)
@@ -244,45 +246,56 @@ fun BirthdayDialog(
         ) {
             Surface(
                 shape = MaterialTheme.shapes.large,
-                tonalElevation = 4.dp,
+                tonalElevation = 6.dp,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(20.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
+
                     birthdays.forEach { contact ->
                         val age = contact.ageOnNextBirthday(date)
+                        val isToday = date == today
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+
+                            // Contact name at top
                             Text(
                                 text = contact.displayName,
-                                style = MaterialTheme.typography.titleMedium
+                                style = MaterialTheme.typography.titleLarge
                             )
 
+                            // 🎯 EMPHASISED TURNING AGE (calendar-only)
                             age?.let {
                                 Text(
-                                    text = "Turning $it",
+                                    text = if (isToday) "🎉 Turning $it" else "Turning $it",
+                                    style = MaterialTheme.typography.headlineMedium,
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
 
+                            // Contact photo centred
                             contact.photoUri?.let {
                                 AsyncImage(
                                     model = it,
                                     contentDescription = null,
                                     modifier = Modifier
-                                        .size(72.dp)
-                                        .clip(MaterialTheme.shapes.medium)
+                                        .size(96.dp)
+                                        .clip(MaterialTheme.shapes.large)
                                 )
                             }
 
+                            // DOB secondary
                             contact.birthday?.let {
-                                Text(text = "DOB: $it")
+                                Text(
+                                    text = "DOB: $it",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                             }
                         }
                     }
