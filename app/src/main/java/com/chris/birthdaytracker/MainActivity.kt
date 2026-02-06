@@ -1,9 +1,12 @@
 package com.chris.birthdaytracker
 
+import android.Manifest
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,8 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
+import android.content.pm.PackageManager
 
 enum class BottomTab {
     Birthdays,
@@ -36,12 +41,62 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppRoot()
+                    ContactsPermissionGate {
+                        AppRoot()
+                    }
                 }
             }
         }
     }
 }
+
+/* =========================================================
+   🔐 Permission Gate (CRITICAL)
+   ========================================================= */
+
+@Composable
+fun ContactsPermissionGate(
+    content: @Composable () -> Unit
+) {
+    val context = LocalContext.current
+
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            hasPermission = granted
+        }
+
+    LaunchedEffect(Unit) {
+        if (!hasPermission) {
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        }
+    }
+
+    if (hasPermission) {
+        content()
+    } else {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Please allow contacts access to continue")
+        }
+    }
+}
+
+/* =========================================================
+   🏠 App Root
+   ========================================================= */
 
 @Composable
 fun AppRoot() {
@@ -102,6 +157,10 @@ fun AppRoot() {
     }
 }
 
+/* =========================================================
+   🎂 Birthdays Screen
+   ========================================================= */
+
 @Composable
 fun BirthdaysScreen(
     contacts: List<ContactModel>,
@@ -132,6 +191,10 @@ fun BirthdaysScreen(
         )
     }
 }
+
+/* =========================================================
+   🧾 Birthday Card
+   ========================================================= */
 
 @Composable
 fun UpcomingBirthdayCard(

@@ -24,7 +24,6 @@ class BirthdayWidget : GlanceAppWidget() {
     ) {
         provideContent {
 
-            // 🔐 Permission check (CRITICAL)
             val hasContactsPermission =
                 ContextCompat.checkSelfPermission(
                     context,
@@ -49,24 +48,28 @@ class BirthdayWidget : GlanceAppWidget() {
 
                 val today = LocalDate.now()
 
-                val birthdaysToday = try {
-                    BirthdayRepository
-                        .getContactsWithBirthday(context)
-                        .filter { it.isBirthdayOn(today) }
+                val contacts = try {
+                    BirthdayRepository.getContactsWithBirthday(context)
                 } catch (e: Exception) {
                     emptyList()
                 }
 
-                if (birthdaysToday.isEmpty()) {
+                if (contacts.isEmpty()) {
                     Text(
-                        text = "🎂 No birthdays today",
+                        text = "🎂 No birthdays found",
                         style = TextStyle(
                             color = ColorProvider(android.R.color.white)
                         )
                     )
-                } else {
-                    val contact = birthdaysToday.first()
+                    return@Column
+                }
 
+                // 🎉 Priority 1: Birthday today
+                val todayBirthday = contacts.firstOrNull {
+                    it.isBirthdayOn(today)
+                }
+
+                if (todayBirthday != null) {
                     Text(
                         text = "🎉 Today’s Birthday",
                         style = TextStyle(
@@ -75,19 +78,70 @@ class BirthdayWidget : GlanceAppWidget() {
                     )
 
                     Text(
-                        text = contact.displayName,
+                        text = todayBirthday.displayName,
                         style = TextStyle(
                             color = ColorProvider(android.R.color.white)
                         )
                     )
 
-                    contact.ageToday()?.let {
+                    todayBirthday.ageToday()?.let {
                         Text(
                             text = "Turning $it",
                             style = TextStyle(
                                 color = ColorProvider(android.R.color.white)
                             )
                         )
+                    }
+
+                } else {
+                    // ⏭️ Priority 2: Next upcoming birthday
+                    val next = contacts
+                        .mapNotNull { contact ->
+                            contact.daysUntilBirthday(today)?.let {
+                                contact to it
+                            }
+                        }
+                        .minByOrNull { it.second }
+
+                    if (next == null) {
+                        Text(
+                            text = "🎂 No upcoming birthdays",
+                            style = TextStyle(
+                                color = ColorProvider(android.R.color.white)
+                            )
+                        )
+                    } else {
+                        val (contact, days) = next
+
+                        Text(
+                            text = "🎉 Next Birthday",
+                            style = TextStyle(
+                                color = ColorProvider(android.R.color.white)
+                            )
+                        )
+
+                        Text(
+                            text = contact.displayName,
+                            style = TextStyle(
+                                color = ColorProvider(android.R.color.white)
+                            )
+                        )
+
+                        Text(
+                            text = "In $days days",
+                            style = TextStyle(
+                                color = ColorProvider(android.R.color.white)
+                            )
+                        )
+
+                        contact.ageOnNextBirthday()?.let {
+                            Text(
+                                text = "Turning $it",
+                                style = TextStyle(
+                                    color = ColorProvider(android.R.color.white)
+                                )
+                            )
+                        }
                     }
                 }
             }
