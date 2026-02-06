@@ -48,7 +48,6 @@ fun EditContactScreen(
         Button(
             enabled = !isSaving,
             onClick = {
-                // 🛡️ Validate before saving
                 val trimmed = birthday.trim()
 
                 if (trimmed.isEmpty()) {
@@ -61,7 +60,6 @@ fun EditContactScreen(
                 }
 
                 try {
-                    // Validate format explicitly
                     LocalDate.parse(trimmed, formatter)
 
                     isSaving = true
@@ -69,6 +67,9 @@ fun EditContactScreen(
                         contactId = contact.id,
                         birthday = trimmed
                     )
+
+                    // 🔁 FORCE WIDGET REFRESH AFTER SAVE
+                    WidgetRefresher.refresh(context)
 
                     onDone()
 
