@@ -8,10 +8,13 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cake
@@ -26,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 enum class BottomTab {
@@ -112,17 +116,23 @@ fun ContactsPermissionGate(
 }
 
 /* =========================================================
-   🏠 App root (SINGLE SOURCE OF TRUTH)
+   🏠 App root (SWIPE ENABLED)
    ========================================================= */
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppRoot() {
     val context = LocalContext.current
     val repository = remember { ContactsRepository(context) }
+    val scope = rememberCoroutineScope()
 
-    var currentTab by remember { mutableStateOf(BottomTab.Birthdays) }
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var selected by remember { mutableStateOf<ContactModel?>(null) }
+
+    val pagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { 2 }
+    )
 
     fun refreshContactsAndWidget() {
         val today = LocalDate.now()
@@ -132,12 +142,10 @@ fun AppRoot() {
         WidgetRefresher.refresh(context)
     }
 
-    // Initial load
     LaunchedEffect(Unit) {
         refreshContactsAndWidget()
     }
 
-    // 🔒 SAFETY NET — refresh widget on resume / recreation
     DisposableEffect(Unit) {
         WidgetRefresher.refresh(context)
         onDispose { }
@@ -151,23 +159,38 @@ fun AppRoot() {
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = currentTab == BottomTab.Birthdays,
-                    onClick = { currentTab = BottomTab.Birthdays },
+                    selected = pagerState.currentPage == 0,
+                    onClick = {
+                        scope.launch {
+                            pagerState.animateScrollToPage(0)
+                        }
+                    },
                     icon = { Icon(Icons.Default.Cake, null) },
                     label = { Text("Birthdays") }
                 )
+
                 NavigationBarItem(
-                    selected = currentTab == BottomTab.Calendar,
-                    onClick = { currentTab = BottomTab.Calendar },
+                    selected = pagerState.currentPage == 1,
+                    onClick = {
+                        scope.launch {
+                            pagerState.animateScrollToPage(1)
+                        }
+                    },
                     icon = { Icon(Icons.Default.CalendarMonth, null) },
                     label = { Text("Calendar") }
                 )
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
-            when (currentTab) {
-                BottomTab.Birthdays -> BirthdaysScreen(
+
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) { page ->
+            when (page) {
+                0 -> BirthdaysScreen(
                     contacts = contacts,
                     selected = selected,
                     onSelect = { selected = it },
@@ -177,7 +200,7 @@ fun AppRoot() {
                     }
                 )
 
-                BottomTab.Calendar -> CalendarScreen(
+                1 -> CalendarScreen(
                     contacts = contacts
                 )
             }
@@ -186,7 +209,7 @@ fun AppRoot() {
 }
 
 /* =========================================================
-   🎂 Birthdays screen (SEARCH + CLEAR)
+   🎂 Birthdays screen
    ========================================================= */
 
 @Composable
@@ -211,9 +234,7 @@ fun BirthdaysScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, null)
-                },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         Icon(
@@ -234,11 +255,7 @@ fun BirthdaysScreen(
 
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 16.dp,
-                    end = 16.dp,
-                    bottom = 16.dp
-                ),
+                contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(filteredContacts) { contact ->
