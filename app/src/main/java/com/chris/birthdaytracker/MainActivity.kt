@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
 }
 
 /* =========================================================
-   🔐 Contacts permission gate
+   🔐 Permission gate
    ========================================================= */
 
 @Composable
@@ -112,7 +112,7 @@ fun ContactsPermissionGate(
 }
 
 /* =========================================================
-   🏠 App root
+   🏠 App root (SINGLE SOURCE OF TRUTH)
    ========================================================= */
 
 @Composable
@@ -132,8 +132,15 @@ fun AppRoot() {
         WidgetRefresher.refresh(context)
     }
 
+    // Initial load
     LaunchedEffect(Unit) {
         refreshContactsAndWidget()
+    }
+
+    // 🔒 SAFETY NET — refresh widget on resume / recreation
+    DisposableEffect(Unit) {
+        WidgetRefresher.refresh(context)
+        onDispose { }
     }
 
     BackHandler(enabled = selected != null) {
@@ -192,12 +199,9 @@ fun BirthdaysScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val filteredContacts = remember(contacts, searchQuery) {
-        if (searchQuery.isBlank()) {
-            contacts
-        } else {
-            contacts.filter {
-                it.displayName.contains(searchQuery, ignoreCase = true)
-            }
+        if (searchQuery.isBlank()) contacts
+        else contacts.filter {
+            it.displayName.contains(searchQuery, ignoreCase = true)
         }
     }
 
@@ -208,13 +212,13 @@ fun BirthdaysScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = null)
+                    Icon(Icons.Default.Search, null)
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
                         Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Clear search",
+                            Icons.Default.Close,
+                            contentDescription = "Clear",
                             modifier = Modifier.clickable {
                                 searchQuery = ""
                             }

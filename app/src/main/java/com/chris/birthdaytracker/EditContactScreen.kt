@@ -1,16 +1,13 @@
 package com.chris.birthdaytracker
 
-import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 @Composable
 fun EditContactScreen(
@@ -18,18 +15,14 @@ fun EditContactScreen(
     onDone: () -> Unit
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val repository = remember { ContactsRepository(context) }
 
-    // 👇 IMPORTANT: explicit type for Compose state
     var birthdayField by remember {
-        mutableStateOf(
-            TextFieldValue(contact.birthday ?: "")
-        )
+        mutableStateOf(TextFieldValue(contact.birthday ?: ""))
     }
 
-    var isSaving by remember { mutableStateOf(false) }
-
-    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    var error by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -40,69 +33,45 @@ fun EditContactScreen(
 
         Text(
             text = contact.displayName,
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.titleLarge
         )
 
         OutlinedTextField(
             value = birthdayField,
-            onValueChange = { newValue ->
-                birthdayField = formatBirthdayInput(newValue)
+            onValueChange = {
+                birthdayField = formatBirthdayInput(it)
             },
             label = { Text("Birthday (dd/MM/yyyy)") },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            isError = error != null
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        error?.let {
+            Text(
+                text = it,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
 
         Button(
-            enabled = !isSaving,
             onClick = {
-                val trimmed = birthdayField.text.trim()
-
-                if (trimmed.isEmpty()) {
-                    Toast.makeText(
-                        context,
-                        "Please enter a birthday",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@Button
-                }
+                // Explicitly dismiss keyboard
+                focusManager.clearFocus(force = true)
 
                 try {
-                    // Validate date format
-                    LocalDate.parse(trimmed, formatter)
-
-                    isSaving = true
                     repository.updateBirthday(
                         contactId = contact.id,
-                        birthday = trimmed
+                        birthday = birthdayField.text.trim()
                     )
-
-                    // 🔁 Refresh widget immediately
-
-
                     onDone()
-
-                } catch (e: DateTimeParseException) {
-                    Toast.makeText(
-                        context,
-                        "Invalid date format. Use dd/MM/yyyy",
-                        Toast.LENGTH_LONG
-                    ).show()
                 } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(
-                        context,
-                        "Failed to save birthday",
-                        Toast.LENGTH_LONG
-                    ).show()
-                } finally {
-                    isSaving = false
+                    error = "Failed to save birthday"
                 }
-            }
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Text(if (isSaving) "Saving…" else "Save")
+            Text("Save")
         }
     }
 }
