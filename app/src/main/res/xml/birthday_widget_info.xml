@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
-    android:minWidth="100dp"
+<appwidget-provider
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
     android:minHeight="100dp"
-    android:updatePeriodMillis="86400000"
+    android:updatePeriodMillis="0"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen"
-    android:previewImage="@drawable/widget_preview"
-    android:widgetFeatures="reconfigurable|configuration_optional"
-    android:configure="com.chris.birthdaytracker.WidgetSettingsActivity">
-</appwidget-provider>
+    android:widgetCategory="home_screen" />

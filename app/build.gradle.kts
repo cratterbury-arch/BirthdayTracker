@@ -5,57 +5,60 @@ plugins {
 }
 
 android {
-    android {
-        namespace = "com.chris.birthdaytracker"
-        compileSdk = 34
+    namespace = "com.chris.birthdaytracker"
+    compileSdk = 34
 
-        defaultConfig {
-            applicationId = "com.example.birthdaytracker"
-            minSdk = 26
-            targetSdk = 34
-            versionCode = 1
-            versionName = "1.0"
-        }
+    defaultConfig {
+        applicationId = "com.example.birthdaytracker"
+        minSdk = 26
+        targetSdk = 34
+        versionCode = 1
+        versionName = "1.0"
+    }
 
-        buildFeatures {
-            compose = true
-        }
+    buildFeatures {
+        compose = true
+    }
 
-        composeOptions {
-            kotlinCompilerExtensionVersion = "1.5.8"
-        }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
 
-        compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 
-        kotlinOptions {
-            jvmTarget = "17"
-        }
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
-    dependencies {
+dependencies {
 
+    // Core
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.9.3")
 
+    // Compose
     implementation(platform("androidx.compose:compose-bom:2024.01.00"))
     implementation("androidx.compose.ui:ui")
-        implementation("androidx.compose.ui:ui-unit")
+    implementation("androidx.compose.ui:ui-unit")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-
     debugImplementation("androidx.compose.ui:ui-tooling")
 
+    // Images
     implementation("io.coil-kt:coil-compose:2.6.0")
 
+    // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
+    // ✅ Glance App Widgets (ONE version only)
     implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
 }
