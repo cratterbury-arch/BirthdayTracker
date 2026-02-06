@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,21 +27,12 @@ import coil.compose.AsyncImage
 import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
 import java.time.LocalDate
 
-/* =========================================================
-   Bottom tabs
-   ========================================================= */
-
 enum class BottomTab {
     Birthdays,
     Calendar
 }
 
-/* =========================================================
-   Activity
-   ========================================================= */
-
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -119,7 +111,7 @@ fun ContactsPermissionGate(
 }
 
 /* =========================================================
-   🏠 App root (THIS is where widget refresh belongs)
+   🏠 App root
    ========================================================= */
 
 @Composable
@@ -136,7 +128,6 @@ fun AppRoot() {
         contacts = repository.getContacts()
             .sortedBy { it.daysUntilBirthday(today) ?: Long.MAX_VALUE }
 
-        // ✅ SAFE widget refresh (stable lifecycle)
         WidgetRefresher.refresh(context)
     }
 
@@ -166,16 +157,12 @@ fun AppRoot() {
             }
         }
     ) { padding ->
-
         Box(modifier = Modifier.padding(padding)) {
             when (currentTab) {
-
                 BottomTab.Birthdays -> BirthdaysScreen(
                     contacts = contacts,
                     selected = selected,
                     onSelect = { selected = it },
-
-                    // 👇 THIS IS onDoneEditing
                     onDoneEditing = {
                         selected = null
                         refreshContactsAndWidget()
@@ -191,7 +178,7 @@ fun AppRoot() {
 }
 
 /* =========================================================
-   🎂 Birthdays screen
+   🎂 Birthdays screen (WITH SEARCH)
    ========================================================= */
 
 @Composable
@@ -201,17 +188,52 @@ fun BirthdaysScreen(
     onSelect: (ContactModel) -> Unit,
     onDoneEditing: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredContacts = remember(contacts, searchQuery) {
+        if (searchQuery.isBlank()) {
+            contacts
+        } else {
+            contacts.filter {
+                it.displayName.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+
     if (selected == null) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+        Column(
+            modifier = Modifier.fillMaxSize()
         ) {
-            items(contacts) { contact ->
-                UpcomingBirthdayCard(
-                    contact = contact,
-                    onClick = { onSelect(contact) }
-                )
+
+            // 🔍 Search bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                placeholder = { Text("Search contacts") },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    end = 16.dp,
+                    bottom = 16.dp
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(filteredContacts) { contact ->
+                    UpcomingBirthdayCard(
+                        contact = contact,
+                        onClick = { onSelect(contact) }
+                    )
+                }
             }
         }
     } else {
