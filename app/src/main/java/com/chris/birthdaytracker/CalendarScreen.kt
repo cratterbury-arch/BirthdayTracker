@@ -1,5 +1,8 @@
 package com.chris.birthdaytracker
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -228,6 +231,7 @@ fun BirthdayDialog(
     onDismiss: () -> Unit
 ) {
     val today = LocalDate.now()
+    val isToday = date == today
 
     val birthdays = contacts.filter { contact ->
         contact.birthday?.let {
@@ -238,65 +242,77 @@ fun BirthdayDialog(
     }
 
     Dialog(onDismissRequest = onDismiss) {
-        Box(
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = 8.dp,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            contentAlignment = Alignment.BottomCenter
+                .padding(16.dp)
         ) {
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                tonalElevation = 6.dp,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
             ) {
+
+                // 🎨 Soft celebratory background (today only)
+                if (isToday) {
+                    Image(
+                        painter = painterResource(id = R.drawable.birthday_background),
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize(),
+                        contentScale = ContentScale.Crop,
+                        alpha = 0.25f
+                    )
+                }
+
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
+                    verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
+
+                    if (isToday) {
+                        Text(
+                            text = "Happy Birthday 🎉",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
 
                     birthdays.forEach { contact ->
                         val age = contact.ageOnNextBirthday(date)
-                        val isToday = date == today
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
+                        Text(
+                            text = contact.displayName,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
 
-                            // Contact name at top
+                        age?.let {
                             Text(
-                                text = contact.displayName,
-                                style = MaterialTheme.typography.titleLarge
+                                text = "Turning $it",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = MaterialTheme.colorScheme.primary
                             )
+                        }
 
-                            // 🎯 EMPHASISED TURNING AGE (calendar-only)
-                            age?.let {
-                                Text(
-                                    text = if (isToday) "🎉 Turning $it" else "Turning $it",
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                        contact.photoUri?.let {
+                            AsyncImage(
+                                model = it,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(MaterialTheme.shapes.extraLarge)
+                            )
+                        }
 
-                            // Contact photo centred
-                            contact.photoUri?.let {
-                                AsyncImage(
-                                    model = it,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .size(96.dp)
-                                        .clip(MaterialTheme.shapes.large)
-                                )
-                            }
-
-                            // DOB secondary
-                            contact.birthday?.let {
-                                Text(
-                                    text = "DOB: $it",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
+                        contact.birthday?.let {
+                            Text(
+                                text = "Born $it",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
