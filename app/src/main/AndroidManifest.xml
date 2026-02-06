@@ -45,6 +45,19 @@
         </receiver>
 
         <receiver
+            android:name=".NextBirthdayWidgetReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_birthday_widget_info" />
+        </receiver>
+
+
+        <receiver
             android:name=".receiver.BirthdayAlarmReceiver"
             android:exported="false" />
 

@@ -62,3 +62,6 @@ data class ContactModel(
         return age
     }
 }
+fun ContactModel.daysUntilNextBirthday(from: LocalDate = LocalDate.now()): Long? {
+    return daysUntilBirthday(from)
+}
