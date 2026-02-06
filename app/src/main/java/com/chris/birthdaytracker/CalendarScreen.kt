@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -23,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -224,6 +226,11 @@ fun DayCell(
     }
 }
 
+fun generateMonths(): List<YearMonth> {
+    val start = YearMonth.now().minusMonths(6)
+    return (0..18).map { start.plusMonths(it.toLong()) }
+}
+
 @Composable
 fun BirthdayDialog(
     date: LocalDate,
@@ -246,29 +253,31 @@ fun BirthdayDialog(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 8.dp,
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(16.dp)
+                .heightIn(max = 420.dp)   // 🔒 HARD STOP — THIS IS THE FIX
+                .fillMaxWidth()
         ) {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box {
 
-                // 🎨 Soft celebratory background (today only)
+                // 🎨 Background (now safely constrained)
                 if (isToday) {
                     Image(
-                        painter = painterResource(id = R.drawable.birthday_background),
+                        painter = painterResource(R.drawable.birthday_background),
                         contentDescription = null,
-                        modifier = Modifier.matchParentSize(),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
                         alpha = 0.25f
+                    )
+
+                    GentleConfettiOverlay(
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
 
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(28.dp),
+                        .padding(28.dp)
+                        .align(Alignment.Center),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(20.dp)
                 ) {
@@ -321,7 +330,31 @@ fun BirthdayDialog(
     }
 }
 
-fun generateMonths(): List<YearMonth> {
-    val start = YearMonth.now().minusMonths(6)
-    return (0..18).map { start.plusMonths(it.toLong()) }
+
+
+@Composable
+fun GentleConfettiOverlay(
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.padding(16.dp)) {
+        val confetti = listOf("🎉", "🎊", "🎈", "🎂")
+
+        confetti.forEachIndexed { index, emoji ->
+            Text(
+                text = emoji,
+                fontSize = 32.sp,
+                modifier = Modifier.align(
+                    when (index) {
+                        0 -> Alignment.TopStart
+                        1 -> Alignment.TopEnd
+                        2 -> Alignment.BottomStart
+                        else -> Alignment.BottomEnd
+                    }
+                ),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+            )
+        }
+    }
 }
+
+
