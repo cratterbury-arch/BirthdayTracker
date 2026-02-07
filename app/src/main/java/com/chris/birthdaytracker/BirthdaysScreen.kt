@@ -1,9 +1,13 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.chris.birthdaytracker
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -36,19 +40,19 @@ fun BirthdaysScreen(
     val filteredContacts = remember(contacts, query, filter) {
         contacts
             .filter {
-                query.isBlank() || it.displayName.contains(query, ignoreCase = true)
+                query.isBlank() ||
+                        it.displayName.contains(query, ignoreCase = true)
             }
             .filter {
                 when (filter) {
                     BirthdayFilter.ALL -> true
                     BirthdayFilter.TODAY -> it.isBirthdayToday(today)
-                    BirthdayFilter.WEEK -> (it.daysUntilBirthday(today) ?: 999) <= 7
+                    BirthdayFilter.WEEK -> (it.daysUntilBirthday(today) ?: 99) <= 7
                     BirthdayFilter.MONTH -> (it.daysUntilBirthday(today) ?: 999) <= 31
                 }
             }
     }
 
-    // ✏️ Edit screen
     if (selected != null) {
         EditContactScreen(
             contact = selected,
@@ -65,10 +69,13 @@ fun BirthdaysScreen(
             onValueChange = { query = it },
             placeholder = { Text("Search birthdays") },
             singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             trailingIcon = {
                 if (query.isNotBlank()) {
                     Text(
-                        "✕",
+                        text = "✕",
                         modifier = Modifier
                             .padding(end = 12.dp)
                             .clickable {
@@ -77,21 +84,18 @@ fun BirthdaysScreen(
                             }
                     )
                 }
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            }
         )
 
-        /* 🧭 Filter Chips (STABLE) */
+        /* 🧭 Filter Chips */
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             BirthdayFilter.values().forEach { chip ->
-                AnimatedAssistChip(
+                AnimatedFilterChip(
                     selected = filter == chip,
                     label = when (chip) {
                         BirthdayFilter.ALL -> "All"
@@ -104,16 +108,16 @@ fun BirthdaysScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(Modifier.height(12.dp))
 
         /* 📭 Empty State */
         AnimatedVisibility(
             visible = filteredContacts.isEmpty(),
-            enter = fadeIn(),
-            exit = fadeOut()
+            enter = fadeIn(tween(200)) + slideInVertically { it / 4 },
+            exit = fadeOut(tween(150))
         ) {
-            EmptyBirthdaysState(
-                when (filter) {
+            BirthdayEmptyState(
+                message = when (filter) {
                     BirthdayFilter.TODAY -> "No birthdays today 🎈"
                     BirthdayFilter.WEEK -> "No birthdays this week 🎈"
                     BirthdayFilter.MONTH -> "No birthdays this month 🎈"
@@ -122,14 +126,18 @@ fun BirthdaysScreen(
             )
         }
 
-        /* 📋 List */
-        if (filteredContacts.isNotEmpty()) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredContacts) { contact ->
+        /* 🎂 List */
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(filteredContacts, key = { it.id }) { contact ->
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(tween(250)) +
+                            slideInVertically { it / 6 }
+                ) {
                     UpcomingBirthdayCard(contact) {
                         onSelect(contact)
                     }
@@ -139,47 +147,26 @@ fun BirthdaysScreen(
     }
 }
 
-/* 🎨 Animated STABLE Chip */
+/* 🎨 Animated Chip */
 @Composable
-private fun AnimatedAssistChip(
+private fun AnimatedFilterChip(
     selected: Boolean,
     label: String,
     onClick: () -> Unit
 ) {
     val scale by animateFloatAsState(
         targetValue = if (selected) 1.05f else 1f,
+        animationSpec = tween(200),
         label = "chip-scale"
     )
 
-    AssistChip(
+    FilterChip(
+        selected = selected,
         onClick = onClick,
         label = { Text(label) },
-        colors = AssistChipDefaults.assistChipColors(
-            containerColor = if (selected)
-                MaterialTheme.colorScheme.primaryContainer
-            else
-                MaterialTheme.colorScheme.surface
-        ),
         modifier = Modifier.graphicsLayer {
             scaleX = scale
             scaleY = scale
         }
     )
-}
-
-/* 📭 Empty State */
-@Composable
-private fun EmptyBirthdaysState(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 48.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
 }
