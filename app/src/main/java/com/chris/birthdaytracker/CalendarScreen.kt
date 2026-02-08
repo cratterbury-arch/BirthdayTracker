@@ -7,41 +7,74 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun CalendarScreen(
     contacts: List<ContactModel>
 ) {
+    val formatter = DateTimeFormatter.ofPattern("dd MMMM")
+
+    val birthdaysByDate = contacts
+        .filter { it.birthday != null }
+        .groupBy { it.birthday!!.withYear(LocalDate.now().year) }
+        .toSortedMap()
+
+    if (birthdaysByDate.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = androidx.compose.ui.Alignment.Center
+        ) {
+            Text("No birthdays found")
+        }
+        return
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(contacts) { contact ->
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-
-                    Text(
-                        text = contact.displayName,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-
-                    Text(
-                        text = contact.birthday ?: "No birthday",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-
-                    if (BirthdayRepository.isBirthdayToday(contact.birthday)) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("🎂 Birthday today!", color = MaterialTheme.colorScheme.primary)
-                    }
-                }
+        birthdaysByDate.forEach { (date, contactsOnDate) ->
+            item {
+                Text(
+                    text = date.format(formatter),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
             }
+
+            items(contactsOnDate) { contact ->
+                BirthdayCalendarCard(contact)
+            }
+        }
+    }
+}
+
+@Composable
+private fun BirthdayCalendarCard(contact: ContactModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = contact.name,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = contact.birthday
+                    ?.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+                    ?: "Birthday unknown",
+                style = MaterialTheme.typography.bodyMedium
+            )
         }
     }
 }

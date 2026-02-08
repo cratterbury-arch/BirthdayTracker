@@ -1,47 +1,62 @@
 package com.chris.birthdaytracker
 
 import android.content.Context
+import android.net.Uri
 import android.provider.ContactsContract
+import java.time.LocalDate
 
-class ContactsRepository(
-    private val context: Context
-) {
+class ContactsRepository(private val context: Context) {
 
     fun getAllContacts(): List<ContactModel> {
-        val results = mutableListOf<ContactModel>()
+        val contacts = mutableListOf<ContactModel>()
 
-        val resolver = context.contentResolver
+        val uri = ContactsContract.Data.CONTENT_URI
+        val projection = arrayOf(
+            ContactsContract.Data.CONTACT_ID,
+            ContactsContract.Data.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Event.START_DATE,
+            ContactsContract.Data.PHOTO_URI
+        )
 
-        val cursor = resolver.query(
-            ContactsContract.Contacts.CONTENT_URI,
-            arrayOf(
-                ContactsContract.Contacts._ID,
-                ContactsContract.Contacts.DISPLAY_NAME,
-                ContactsContract.Contacts.PHOTO_URI
-            ),
-            null,
-            null,
-            ContactsContract.Contacts.DISPLAY_NAME + " ASC"
-        ) ?: return emptyList()
+        val selection =
+            "${ContactsContract.Data.MIMETYPE} = ? AND " +
+                    "${ContactsContract.CommonDataKinds.Event.TYPE} = ?"
 
-        cursor.use {
-            val idIndex = it.getColumnIndexOrThrow(ContactsContract.Contacts._ID)
-            val nameIndex =
-                it.getColumnIndexOrThrow(ContactsContract.Contacts.DISPLAY_NAME)
-            val photoIndex =
-                it.getColumnIndexOrThrow(ContactsContract.Contacts.PHOTO_URI)
+        val selectionArgs = arrayOf(
+            ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE,
+            ContactsContract.CommonDataKinds.Event.TYPE_BIRTHDAY.toString()
+        )
+
+        val cursor = context.contentResolver.query(
+            uri,
+            projection,
+            selection,
+            selectionArgs,
+            null
+        )
+
+        cursor?.use {
+            val idIndex = it.getColumnIndexOrThrow(ContactsContract.Data.CONTACT_ID)
+            val nameIndex = it.getColumnIndexOrThrow(ContactsContract.Data.DISPLAY_NAME)
+            val dateIndex = it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Event.START_DATE)
+            val photoIndex = it.getColumnIndexOrThrow(ContactsContract.Data.PHOTO_URI)
 
             while (it.moveToNext()) {
-                val id = it.getLong(idIndex)              // ✅ FIXED
-                val displayName = it.getString(nameIndex)
-                val photoUri = it.getString(photoIndex)
+                val id = it.getLong(idIndex)
+                val name = it.getString(nameIndex) ?: continue
+                val dateString = it.getString(dateIndex)
+                val photoUri = it.getString(photoIndex)?.let { Uri.parse(it) }
 
-                val birthday = getBirthdayForContact(id)
+                val birthday = try {
+                    dateString?.let { LocalDate.parse(it) }
+                } catch (e: Exception) {
+                    null
+                }
 
-                results.add(
+                contacts.add(
                     ContactModel(
                         id = id,
-                        displayName = displayName,
+                        name = name,
                         birthday = birthday,
                         photoUri = photoUri
                     )
@@ -49,29 +64,6 @@ class ContactsRepository(
             }
         }
 
-        return results
-    }
-
-    private fun getBirthdayForContact(contactId: Long): String? {
-        val resolver = context.contentResolver
-
-        val cursor = resolver.query(
-            ContactsContract.Data.CONTENT_URI,
-            arrayOf(ContactsContract.CommonDataKinds.Event.START_DATE),
-            "${ContactsContract.Data.CONTACT_ID} = ? AND ${ContactsContract.Data.MIMETYPE} = ?",
-            arrayOf(
-                contactId.toString(),
-                ContactsContract.CommonDataKinds.Event.CONTENT_ITEM_TYPE
-            ),
-            null
-        ) ?: return null
-
-        cursor.use {
-            if (it.moveToFirst()) {
-                return it.getString(0)
-            }
-        }
-
-        return null
+        return contacts
     }
 }

@@ -1,9 +1,11 @@
 package com.chris.birthdaytracker
 
+import android.net.Uri
+import java.time.LocalDate
+
 data class ContactModel(
     val id: Long,
-    val displayName: String,
-    val birthday: String? = null,
-    val photoUri: String? = null,
-    val isLocal: Boolean = false
+    val name: String,
+    val birthday: LocalDate?,
+    val photoUri: Uri?
 )

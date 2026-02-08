@@ -25,9 +25,7 @@ fun AppRoot() {
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
 
     val permissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             hasPermission = granted
         }
 
@@ -42,6 +40,6 @@ fun AppRoot() {
             permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
         }
     } else {
-        BirthdaysScreen(contacts = contacts)
+        BirthdaysScreen(contacts)
     }
 }

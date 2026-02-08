@@ -1,36 +1,35 @@
 package com.chris.birthdaytracker
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import java.time.format.DateTimeFormatter
 
-private val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+/* ---------- Date helpers (LOGIC) ---------- */
 
-fun ContactModel.birthDate(): LocalDate? =
-    birthday?.let {
-        runCatching { LocalDate.parse(it, formatter) }.getOrNull()
+fun ContactModel.nextBirthday(from: LocalDate = LocalDate.now()): LocalDate? {
+    val birth = birthday ?: return null
+
+    var next = birth.withYear(from.year)
+    if (next.isBefore(from)) {
+        next = next.plusYears(1)
     }
-
-fun ContactModel.daysUntilBirthday(today: LocalDate = LocalDate.now()): Long? {
-    val birth = birthDate() ?: return null
-    var next = birth.withYear(today.year)
-    if (!next.isAfter(today)) next = next.plusYears(1)
-    return ChronoUnit.DAYS.between(today, next)
+    return next
 }
 
-fun ContactModel.isBirthdayToday(today: LocalDate = LocalDate.now()): Boolean =
-    birthDate()?.let {
-        it.dayOfMonth == today.dayOfMonth && it.month == today.month
-    } ?: false
+fun ContactModel.daysUntilBirthday(from: LocalDate = LocalDate.now()): Int? {
+    val next = nextBirthday(from) ?: return null
+    return ChronoUnit.DAYS.between(from, next).toInt()
+}
 
-fun ContactModel.ageOnDate(date: LocalDate): Int? =
-    birthDate()?.let {
-        ChronoUnit.YEARS.between(it, date).toInt()
-    }
+fun ContactModel.ageOnDate(date: LocalDate): Int? {
+    val birth = birthday ?: return null
+    return date.year - birth.year
+}
 
-fun ContactModel.nextBirthday(today: LocalDate = LocalDate.now()): LocalDate? {
-    val birth = birthDate() ?: return null
-    var next = birth.withYear(today.year)
-    if (!next.isAfter(today)) next = next.plusYears(1)
-    return next
+/* ---------- UI helpers (STRINGS ONLY) ---------- */
+
+fun ContactModel.formattedBirthday(): String {
+    return birthday
+        ?.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+        ?: "Birthday unknown"
 }

@@ -64,7 +64,7 @@ fun EditContactScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         Text(
-            text = contact.displayName,
+            text = contact.name,
             style = MaterialTheme.typography.headlineSmall
         )
 
