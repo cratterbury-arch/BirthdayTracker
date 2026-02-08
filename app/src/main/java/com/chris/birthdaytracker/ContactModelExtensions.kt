@@ -2,28 +2,35 @@ package com.chris.birthdaytracker
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
-private val birthdayFormatter =
-    DateTimeFormatter.ofPattern("dd/MM/yyyy")
+private val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
-fun ContactModel.birthdayDate(): LocalDate? =
-    try {
-        birthday?.let { LocalDate.parse(it, birthdayFormatter) }
-    } catch (_: Exception) {
-        null
+fun ContactModel.birthDate(): LocalDate? =
+    birthday?.let {
+        runCatching { LocalDate.parse(it, formatter) }.getOrNull()
     }
 
-fun ContactModel.isBirthdayOn(date: LocalDate): Boolean {
-    val birth = birthdayDate() ?: return false
-    return birth.dayOfMonth == date.dayOfMonth &&
-            birth.month == date.month
+fun ContactModel.daysUntilBirthday(today: LocalDate = LocalDate.now()): Long? {
+    val birth = birthDate() ?: return null
+    var next = birth.withYear(today.year)
+    if (!next.isAfter(today)) next = next.plusYears(1)
+    return ChronoUnit.DAYS.between(today, next)
 }
 
-fun ContactModel.ageOnDate(date: LocalDate): Int? {
-    val birth = birthdayDate() ?: return null
-    var age = date.year - birth.year
-    if (date < birth.withYear(date.year)) {
-        age--
+fun ContactModel.isBirthdayToday(today: LocalDate = LocalDate.now()): Boolean =
+    birthDate()?.let {
+        it.dayOfMonth == today.dayOfMonth && it.month == today.month
+    } ?: false
+
+fun ContactModel.ageOnDate(date: LocalDate): Int? =
+    birthDate()?.let {
+        ChronoUnit.YEARS.between(it, date).toInt()
     }
-    return age
+
+fun ContactModel.nextBirthday(today: LocalDate = LocalDate.now()): LocalDate? {
+    val birth = birthDate() ?: return null
+    var next = birth.withYear(today.year)
+    if (!next.isAfter(today)) next = next.plusYears(1)
+    return next
 }
