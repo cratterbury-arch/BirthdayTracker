@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import nl.dionsegijn.konfetti.compose.KonfettiView
@@ -265,7 +266,9 @@ private fun BirthdayPopup(
 
             if (isToday) {
                 KonfettiView(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(1f),
                     parties = listOf(
                         Party(
                             speed = 0f,
@@ -291,10 +294,13 @@ private fun BirthdayPopup(
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth(0.85f)
+                modifier = Modifier
+                    .wrapContentWidth()
+                    .wrapContentHeight()
             ) {
                 Column(
-                    modifier = Modifier.padding(24.dp),
+                    modifier = Modifier
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
