@@ -3,7 +3,9 @@ package com.chris.birthdaytracker
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,7 @@ import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
     contacts: List<ContactModel>
@@ -45,11 +48,15 @@ fun CalendarScreen(
     var selectedContact by remember { mutableStateOf<ContactModel?>(null) }
 
     Box {
+        val snapBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+
         LazyColumn(
             state = listState,
+            flingBehavior = snapBehavior,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 32.dp)
-        ) {
+        )
+        {
             months.forEach { month ->
                 item {
                     MonthSection(
