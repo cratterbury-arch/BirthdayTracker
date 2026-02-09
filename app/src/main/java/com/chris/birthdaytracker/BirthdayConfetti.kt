@@ -2,11 +2,12 @@ package com.chris.birthdaytracker
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxSize
 import nl.dionsegijn.konfetti.compose.KonfettiView
 import nl.dionsegijn.konfetti.core.*
 import nl.dionsegijn.konfetti.core.emitter.Emitter
 import java.util.concurrent.TimeUnit
+
 
 @Composable
 fun BirthdayConfetti(

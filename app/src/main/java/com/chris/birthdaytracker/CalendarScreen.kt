@@ -268,25 +268,57 @@ private fun BirthdayPopup(
                 KonfettiView(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(1f),
+                        .zIndex(1f), // ⬅️ THIS is the critical fix
                     parties = listOf(
+
+
+                        // 🎊 MAIN CELEBRATION BURST (top center)
                         Party(
-                            speed = 0f,
-                            maxSpeed = 25f,
-                            damping = 0.9f,
+                            speed = 10f,
+                            maxSpeed = 45f,
+                            damping = 0.85f,
                             spread = 360,
                             colors = listOf(
-                                0xFFE57373.toInt(),
-                                0xFFBA68C8.toInt(),
-                                0xFF64B5F6.toInt(),
-                                0xFF81C784.toInt(),
-                                0xFFFFD54F.toInt()
+                                0xfce18a,
+                                0xff726d,
+                                0xf4306d,
+                                0xb48def,
+                                0x6A4C93
                             ),
                             emitter = Emitter(
-                                duration = 300,
-                                TimeUnit.MILLISECONDS
-                            ).perSecond(120),
+                                duration = 2,
+                                TimeUnit.SECONDS
+                            ).perSecond(220), // 🔥 MORE CONFETTI
                             position = Position.Relative(0.5, 0.0)
+                        ),
+
+                        // 🎊 LEFT SIDE SPRAY
+                        Party(
+                            speed = 8f,
+                            maxSpeed = 35f,
+                            damping = 0.9f,
+                            spread = 120,
+                            colors = listOf(0xff726d, 0xf4306d, 0xb48def),
+                            emitter = Emitter(
+                                duration = 2,
+                                TimeUnit.SECONDS
+                            ).perSecond(120),
+                            position = Position.Relative(0.0, 0.3)
+                        ),
+
+                        // 🎊 RIGHT SIDE SPRAY
+                        Party(
+                            speed = 8f,
+                            maxSpeed = 35f,
+                            damping = 0.9f,
+                            spread = 90,
+                            angle = 180,
+                            colors = listOf(0xff726d, 0xf4306d, 0xb48def),
+                            emitter = Emitter(
+                                duration = 2,
+                                TimeUnit.SECONDS
+                            ).perSecond(140),
+                            position = Position.Relative(1.0, 0.3)
                         )
                     )
                 )
