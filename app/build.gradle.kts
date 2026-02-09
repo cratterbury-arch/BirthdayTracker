@@ -60,5 +60,7 @@ dependencies {
 
 
     implementation("nl.dionsegijn:konfetti-compose:2.0.2")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 
 }
+

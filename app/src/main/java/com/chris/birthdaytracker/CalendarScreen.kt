@@ -208,13 +208,20 @@ private fun BirthdayPopup(
 ) {
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
+
     val next = birthday.withYear(today.year).let {
         if (it.isBefore(today)) it.plusYears(1) else it
     }
+
+    val isToday = birthday.withYear(today.year) == today
     val age = next.year - birthday.year
     val days = ChronoUnit.DAYS.between(today, next)
 
     Dialog(onDismissRequest = onDismiss) {
+
+        // 🎉 Konfetti + sound/haptic ONLY when birthday is today
+        BirthdayKonfetti(enabled = isToday)
+
         Card(
             shape = RoundedCornerShape(24.dp),
             modifier = Modifier.padding(24.dp)
