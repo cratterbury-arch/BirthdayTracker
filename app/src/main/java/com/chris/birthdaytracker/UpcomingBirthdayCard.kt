@@ -1,74 +1,97 @@
 package com.chris.birthdaytracker
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import coil.compose.rememberAsyncImagePainter
+import coil.compose.AsyncImage
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @Composable
 fun UpcomingBirthdayCard(
-    contact: ContactModel,
-    daysUntil: Long,
-    age: Int
+    contact: ContactModel
 ) {
+    val today = LocalDate.now()
+
+    val birthdayText = contact.birthday
+        ?.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+        ?: "Birthday unknown"
+
+    val daysUntilBirthday = contact.birthday?.let { birthday ->
+        val nextBirthday = birthday.withYear(today.year)
+            .let { if (it.isBefore(today)) it.plusYears(1) else it }
+        ChronoUnit.DAYS.between(today, nextBirthday).toInt()
+    }
+
+    val daysText = daysUntilBirthday?.let {
+        if (it == 0) "Today 🎉" else "$it days"
+    } ?: "—"
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
 
-            // Photo
+            // ✅ CONTACT PHOTO (or fallback)
             if (contact.photoUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(contact.photoUri),
+                AsyncImage(
+                    model = contact.photoUri,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
+                        .size(48.dp)
+                        .clip(CircleShape)
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.size(48.dp),
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer
                 ) {
-                    Text(
-                        text = contact.name.firstOrNull()?.uppercase() ?: "?",
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .fillMaxSize(),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }
             }
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(contact.name, style = MaterialTheme.typography.titleMedium)
-                Text("Turns $age", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = contact.name,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Text(
+                    text = birthdayText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Text(
-                text = if (daysUntil == 0L) "Today 🎉" else "$daysUntil days",
-                style = MaterialTheme.typography.labelLarge
+                text = daysText,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
     }

@@ -8,23 +8,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 @Composable
-fun BirthdaysScreen(contacts: List<ContactModel>) {
+fun BirthdaysScreen(
+    contacts: List<ContactModel>
+) {
+    val today = LocalDate.now()
 
-    val upcoming = contacts
+    val sortedContacts = contacts
         .filter { it.birthday != null }
-        .map { contact ->
-            val birthday = contact.birthday!!
-            Triple(
-                contact,
-                daysUntilBirthday(birthday),
-                ageOnNextBirthday(birthday)
-            )
+        .sortedBy { birthday ->
+            val next = birthday.birthday!!.withYear(today.year)
+                .let { if (it.isBefore(today)) it.plusYears(1) else it }
+            ChronoUnit.DAYS.between(today, next)
         }
-        .sortedBy { it.second }
 
-    if (upcoming.isEmpty()) {
+    if (sortedContacts.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -35,16 +36,13 @@ fun BirthdaysScreen(contacts: List<ContactModel>) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(vertical = 12.dp)
     ) {
-        items(upcoming) { (contact, days, age) ->
-            UpcomingBirthdayCard(
-                contact = contact,
-                daysUntil = days,
-                age = age
-            )
+        items(sortedContacts) { contact ->
+            UpcomingBirthdayCard(contact = contact)
         }
     }
 }
