@@ -209,30 +209,47 @@ private fun BirthdayPopup(
 ) {
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
+
     val next = birthday.withYear(today.year).let {
         if (it.isBefore(today)) it.plusYears(1) else it
     }
+
+    val isToday = ChronoUnit.DAYS.between(today, next) == 0L
     val age = next.year - birthday.year
-    val days = ChronoUnit.DAYS.between(today, next)
+
+    val context = LocalContext.current
+    var playedSound by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isToday) {
+        if (isToday && !playedSound) {
+            playBirthdaySound(context)
+            playedSound = true
+        }
+    }
 
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth()
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            // 🔑 KEY CHANGE: Box wrapper
-            Box {
-                // 🎉 Konfetti only if birthday is today
-                if (days == 0L) {
-                    BirthdayKonfetti()
-                }
 
+            if (isToday) {
+                BirthdayKonfetti(
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .widthIn(max = 320.dp)
+                    .wrapContentHeight()
+            ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+
                     AsyncImage(
                         model = contact.photoUri,
                         contentDescription = null,
@@ -258,11 +275,13 @@ private fun BirthdayPopup(
                     Spacer(Modifier.height(8.dp))
 
                     Text(
-                        birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                        text = birthday.format(
+                            DateTimeFormatter.ofPattern("d MMM yyyy")
+                        ),
                         style = MaterialTheme.typography.bodySmall
                     )
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(20.dp))
 
                     Button(onClick = onDismiss) {
                         Text("Close")
