@@ -8,12 +8,14 @@ fun playBirthdaySound(context: Context) {
     val audioManager =
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
 
-    // Respect system silent / vibrate mode
+    // Respect silent / vibrate mode
     if (audioManager.ringerMode != AudioManager.RINGER_MODE_NORMAL) {
         return
     }
 
     val player = MediaPlayer.create(context, R.raw.birthday_pop)
-    player.setOnCompletionListener { it.release() }
+    player.setOnCompletionListener {
+        it.release()
+    }
     player.start()
 }

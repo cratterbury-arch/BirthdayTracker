@@ -1,15 +1,15 @@
 package com.chris.birthdaytracker
 
-import android.net.Uri
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +23,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -30,6 +35,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -37,26 +43,29 @@ fun CalendarScreen(
     contacts: List<ContactModel>
 ) {
     val today = LocalDate.now()
+    val currentMonth = YearMonth.now()
+
     val months = remember {
-        (-12..12).map { YearMonth.now().plusMonths(it.toLong()) }
+        (-12..12).map { currentMonth.plusMonths(it.toLong()) }
     }
 
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = months.indexOf(YearMonth.now()).coerceAtLeast(0)
-    )
+    val currentMonthIndex = months.indexOf(currentMonth).coerceAtLeast(0)
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentMonthIndex)
+    val scope = rememberCoroutineScope()
 
     var selectedContact by remember { mutableStateOf<ContactModel?>(null) }
 
-    Box {
-        val snapBehavior = rememberSnapFlingBehavior(lazyListState = listState)
+    val showJumpFab by remember {
+        derivedStateOf { listState.firstVisibleItemIndex != currentMonthIndex }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
 
         LazyColumn(
             state = listState,
-            flingBehavior = snapBehavior,
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 32.dp)
-        )
-        {
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
             months.forEach { month ->
                 item {
                     MonthSection(
@@ -67,6 +76,21 @@ fun CalendarScreen(
                     )
                 }
             }
+        }
+
+        if (showJumpFab) {
+            ExtendedFloatingActionButton(
+                onClick = {
+                    scope.launch {
+                        listState.animateScrollToItem(currentMonthIndex)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(24.dp),
+                icon = { Icon(Icons.Default.Today, contentDescription = null) },
+                text = { Text("Back to Today") }
+            )
         }
 
         selectedContact?.let {
@@ -123,11 +147,11 @@ private fun CalendarGrid(
 ) {
     val firstDay = month.atDay(1)
     val daysInMonth = month.lengthOfMonth()
-    val startOffset = (firstDay.dayOfWeek.value % 7)
-
+    val startOffset = firstDay.dayOfWeek.value % 7
     val birthdayMap = birthdays.groupBy { it.birthday!!.dayOfMonth }
 
     Column {
+
         Row(Modifier.fillMaxWidth()) {
             DayOfWeek.values().forEach {
                 Text(
@@ -154,6 +178,7 @@ private fun CalendarGrid(
                     ) {
                         if (index >= startOffset && day <= daysInMonth) {
                             val contactsToday = birthdayMap[day].orEmpty()
+
                             DayCell(
                                 day = day,
                                 isToday = today.dayOfMonth == day &&
@@ -214,6 +239,7 @@ private fun BirthdayPopup(
     contact: ContactModel,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
 
@@ -221,16 +247,13 @@ private fun BirthdayPopup(
         if (it.isBefore(today)) it.plusYears(1) else it
     }
 
-    val isToday = ChronoUnit.DAYS.between(today, next) == 0L
+    val daysUntil = ChronoUnit.DAYS.between(today, next)
+    val isToday = daysUntil == 0L
     val age = next.year - birthday.year
 
-    val context = LocalContext.current
-    var playedSound by remember { mutableStateOf(false) }
-
     LaunchedEffect(isToday) {
-        if (isToday && !playedSound) {
+        if (isToday) {
             playBirthdaySound(context)
-            playedSound = true
         }
     }
 
@@ -241,16 +264,34 @@ private fun BirthdayPopup(
         ) {
 
             if (isToday) {
-                BirthdayKonfetti(
-                    modifier = Modifier.fillMaxSize()
+                KonfettiView(
+                    modifier = Modifier.fillMaxSize(),
+                    parties = listOf(
+                        Party(
+                            speed = 0f,
+                            maxSpeed = 25f,
+                            damping = 0.9f,
+                            spread = 360,
+                            colors = listOf(
+                                0xFFE57373.toInt(),
+                                0xFFBA68C8.toInt(),
+                                0xFF64B5F6.toInt(),
+                                0xFF81C784.toInt(),
+                                0xFFFFD54F.toInt()
+                            ),
+                            emitter = Emitter(
+                                duration = 300,
+                                TimeUnit.MILLISECONDS
+                            ).perSecond(120),
+                            position = Position.Relative(0.5, 0.0)
+                        )
+                    )
                 )
             }
 
             Card(
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .widthIn(max = 320.dp)
-                    .wrapContentHeight()
+                modifier = Modifier.fillMaxWidth(0.85f)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -270,21 +311,21 @@ private fun BirthdayPopup(
 
                     Text(
                         text = contact.name,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        textAlign = TextAlign.Center
                     )
 
                     Text(
                         text = "Turning $age 🎂",
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
                     )
 
                     Spacer(Modifier.height(8.dp))
 
                     Text(
-                        text = birthday.format(
-                            DateTimeFormatter.ofPattern("d MMM yyyy")
-                        ),
+                        text = birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
                         style = MaterialTheme.typography.bodySmall
                     )
 
