@@ -1,19 +1,21 @@
 package com.chris.birthdaytracker
 
 import android.Manifest
-import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import android.content.pm.PackageManager
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppRoot() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
-    var hasPermission by remember {
+    var hasContactsPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
                 context,
@@ -24,20 +26,52 @@ fun AppRoot() {
 
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
 
-    val permissionLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            hasPermission = granted
+    // Contacts permission launcher
+    val contactsPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { granted ->
+            hasContactsPermission = granted
         }
 
-    LaunchedEffect(hasPermission) {
-        if (hasPermission) {
-            contacts = ContactsRepository(context).getAllContacts()
+    // Notification permission launcher (Android 13+)
+    val notificationPermissionLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { }
+
+    LaunchedEffect(Unit) {
+        // 🔔 Notifications permission
+        if (Build.VERSION.SDK_INT >= 33) {
+            notificationPermissionLauncher.launch(
+                Manifest.permission.POST_NOTIFICATIONS
+            )
+        }
+
+        // 📇 Contacts permission
+        if (!hasContactsPermission) {
+            contactsPermissionLauncher.launch(
+                Manifest.permission.READ_CONTACTS
+            )
         }
     }
 
-    if (!hasPermission) {
+    // Load contacts once permission is granted
+    LaunchedEffect(hasContactsPermission) {
+        if (hasContactsPermission) {
+            contacts = ContactsRepository(context).getAllContacts()
+
+            // 🔔 Schedule notifications AFTER contacts load
+            BirthdayNotificationScheduler
+                .scheduleBirthdayNotifications(context, contacts)
+        }
+    }
+
+    if (!hasContactsPermission) {
         PermissionRequestScreen {
-            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+            contactsPermissionLauncher.launch(
+                Manifest.permission.READ_CONTACTS
+            )
         }
     } else {
         AppScaffold(contacts)
