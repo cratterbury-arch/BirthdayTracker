@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -208,54 +209,64 @@ private fun BirthdayPopup(
 ) {
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
-
     val next = birthday.withYear(today.year).let {
         if (it.isBefore(today)) it.plusYears(1) else it
     }
-
-    val isToday = birthday.withYear(today.year) == today
     val age = next.year - birthday.year
     val days = ChronoUnit.DAYS.between(today, next)
 
     Dialog(onDismissRequest = onDismiss) {
-
-        // 🎉 Konfetti + sound/haptic ONLY when birthday is today
-        BirthdayKonfetti(enabled = isToday)
-
         Card(
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.padding(24.dp)
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
+            // 🔑 KEY CHANGE: Box wrapper
+            Box {
+                // 🎉 Konfetti only if birthday is today
+                if (days == 0L) {
+                    BirthdayKonfetti()
+                }
 
-                AsyncImage(
-                    model = contact.photoUri,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(96.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                )
+                Column(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AsyncImage(
+                        model = contact.photoUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
 
-                Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(16.dp))
 
-                Text(contact.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text("Turning $age 🎂", color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        text = contact.name,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
 
-                Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Turning $age 🎂",
+                        color = MaterialTheme.colorScheme.primary
+                    )
 
-                Text(
-                    birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
-                    style = MaterialTheme.typography.bodySmall
-                )
+                    Spacer(Modifier.height(8.dp))
 
-                Spacer(Modifier.height(16.dp))
+                    Text(
+                        birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                        style = MaterialTheme.typography.bodySmall
+                    )
 
-                Button(onClick = onDismiss) {
-                    Text("Close")
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(onClick = onDismiss) {
+                        Text("Close")
+                    }
                 }
             }
         }

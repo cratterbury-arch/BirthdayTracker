@@ -1,34 +1,38 @@
 package com.chris.birthdaytracker
 
-import android.content.Context
-import android.media.MediaPlayer
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.fillMaxSize
+import nl.dionsegijn.konfetti.compose.KonfettiView
+import nl.dionsegijn.konfetti.core.Party
+import nl.dionsegijn.konfetti.core.Position
+import nl.dionsegijn.konfetti.core.emitter.Emitter
+import java.util.concurrent.TimeUnit
 
 @Composable
 fun BirthdayKonfetti(
-    enabled: Boolean
+    modifier: Modifier = Modifier
 ) {
-    if (!enabled) return
-
-    val context = LocalContext.current
-    val haptics = LocalHapticFeedback.current
-
-    LaunchedEffect(Unit) {
-        // 🔊 Try sound first
-        try {
-            val player = MediaPlayer.create(context, R.raw.birthday_pop) // <-- your sound file
-            player.start()
-            player.setOnCompletionListener { it.release() }
-        } catch (_: Exception) {
-            // 📳 Fallback haptic
-            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-        }
-
-        // 🎉 Confetti hook point
-        // When ready, plug Konfetti here (no UI dependency yet)
-    }
+    KonfettiView(
+        modifier = modifier.fillMaxSize(),
+        parties = listOf(
+            Party(
+                speed = 0f,
+                maxSpeed = 25f,
+                damping = 0.9f,
+                spread = 360,
+                colors = listOf(
+                    0xFFFCE18A.toInt(),
+                    0xFFFF726D.toInt(),
+                    0xFFB48DEF.toInt()
+                ),
+                emitter = Emitter(
+                    duration = 200,
+                    TimeUnit.MILLISECONDS
+                ).max(150),
+                position = Position.Relative(0.5, 0.2)
+            )
+        )
+    )
 }
