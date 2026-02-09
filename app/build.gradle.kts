@@ -9,7 +9,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.birthdaytracker"
+        applicationId = "com.chris.birthdaytracker"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -19,6 +19,14 @@ android {
     buildFeatures {
         compose = true
     }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
+    }
+
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
@@ -31,6 +39,13 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+    }
+
+    // ✅ REQUIRED for Android 15+ (16 KB page size support)
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -58,9 +73,9 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-
+    // Konfetti 🎉
     implementation("nl.dionsegijn:konfetti-compose:2.0.2")
+
+    // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-
 }
-
