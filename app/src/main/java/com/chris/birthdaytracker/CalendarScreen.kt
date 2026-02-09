@@ -1,5 +1,6 @@
 package com.chris.birthdaytracker
 
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -258,7 +259,13 @@ private fun BirthdayPopup(
         }
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -303,7 +310,7 @@ private fun BirthdayPopup(
                                 duration = 2,
                                 TimeUnit.SECONDS
                             ).perSecond(120),
-                            position = Position.Relative(0.0, 0.3)
+                            position = Position.Relative(-0.05, 0.3)
                         ),
 
                         // 🎊 RIGHT SIDE SPRAY
@@ -318,7 +325,7 @@ private fun BirthdayPopup(
                                 duration = 2,
                                 TimeUnit.SECONDS
                             ).perSecond(140),
-                            position = Position.Relative(1.0, 0.3)
+                            position = Position.Relative(1.12, 0.3)
                         )
                     )
                 )
