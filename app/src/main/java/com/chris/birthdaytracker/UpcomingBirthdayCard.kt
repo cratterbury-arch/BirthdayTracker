@@ -159,17 +159,33 @@ private fun DaysToGoCircle(days: Int) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("in", fontSize = 11.sp, color = plum)
+
+            Text(
+                text = "in",
+                fontSize = 9.sp,
+                lineHeight = 9.sp,
+                color = plum
+            )
+
             Text(
                 text = days.toString(),
-                fontSize = 18.sp,
+                fontSize = 17.sp,
+                lineHeight = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = plum
             )
-            Text("days", fontSize = 11.sp, color = plum)
+
+            Text(
+                text = "days",
+                fontSize = 9.sp,
+                lineHeight = 9.sp,
+                color = plum
+            )
         }
     }
 }
+
+
 
 /* ---------- Today badge ---------- */
 
