@@ -40,6 +40,6 @@ fun AppRoot() {
             permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
         }
     } else {
-        BirthdaysScreen(contacts)
+        AppScaffold(contacts)
     }
 }
