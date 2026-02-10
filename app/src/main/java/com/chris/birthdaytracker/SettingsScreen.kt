@@ -12,17 +12,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import androidx.compose.ui.graphics.vector.ImageVector
-
 
 @Composable
 fun SettingsScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val soundEnabled by SettingsStore.soundEnabled(context).collectAsState(true)
-    val confettiEnabled by SettingsStore.confettiEnabled(context).collectAsState(true)
-    val notificationsEnabled by SettingsStore.notificationsEnabled(context).collectAsState(true)
+    val soundEnabled by SettingsStore.soundEnabled(context)
+        .collectAsState(initial = true)
+
+    val confettiEnabled by SettingsStore.confettiEnabled(context)
+        .collectAsState(initial = true)
+
+    val notificationsEnabled by SettingsStore.notificationsEnabled(context)
+        .collectAsState(initial = true)
 
     Column(
         modifier = Modifier
@@ -33,43 +36,43 @@ fun SettingsScreen() {
 
         Text("Settings", style = MaterialTheme.typography.titleLarge)
 
-        IconSwitchRow(
-            Icons.Default.VolumeUp,
-            "Sound",
-            soundEnabled
+        SettingToggle(
+            icon = Icons.Default.VolumeUp,
+            label = "Sound",
+            checked = soundEnabled
         ) {
             scope.launch {
-                SettingsStore.setSound(context, !soundEnabled)
+                SettingsStore.setSoundEnabled(context, !soundEnabled)
             }
         }
 
-        IconSwitchRow(
-            Icons.Default.Celebration,
-            "Confetti",
-            confettiEnabled
+        SettingToggle(
+            icon = Icons.Default.Celebration,
+            label = "Confetti",
+            checked = confettiEnabled
         ) {
             scope.launch {
-                SettingsStore.setConfetti(context, !confettiEnabled)
+                SettingsStore.setConfettiEnabled(context, !confettiEnabled)
             }
         }
 
-        IconSwitchRow(
-            Icons.Default.Notifications,
-            "Notifications",
-            notificationsEnabled
+        SettingToggle(
+            icon = Icons.Default.Notifications,
+            label = "Notifications",
+            checked = notificationsEnabled
         ) {
             scope.launch {
-                SettingsStore.setNotifications(context, !notificationsEnabled)
+                SettingsStore.setNotificationsEnabled(context, !notificationsEnabled)
             }
         }
 
         Divider()
 
         Button(
+            modifier = Modifier.fillMaxWidth(),
             onClick = {
                 BirthdayNotificationScheduler.scheduleTestNotification(context)
-            },
-            modifier = Modifier.fillMaxWidth()
+            }
         ) {
             Icon(Icons.Default.NotificationsActive, null)
             Spacer(Modifier.width(8.dp))
@@ -79,14 +82,14 @@ fun SettingsScreen() {
         Divider()
 
         Button(
+            modifier = Modifier.fillMaxWidth(),
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:you@example.com")
-                    putExtra(Intent.EXTRA_SUBJECT, "Birthday Tracker Feedback")
+                    data = Uri.parse("mailto:youremail@example.com")
+                    putExtra(Intent.EXTRA_SUBJECT, "Birthday Tracker feedback")
                 }
                 context.startActivity(intent)
-            },
-            modifier = Modifier.fillMaxWidth()
+            }
         ) {
             Icon(Icons.Default.Email, null)
             Spacer(Modifier.width(8.dp))
@@ -96,22 +99,22 @@ fun SettingsScreen() {
 }
 
 @Composable
-private fun IconSwitchRow(
-    icon: ImageVector,
-    title: String,
+private fun SettingToggle(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
     checked: Boolean,
     onToggle: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null)
             Spacer(Modifier.width(12.dp))
-            Text(title)
+            Text(label)
         }
-        Switch(checked, onCheckedChange = { onToggle() })
+        Switch(checked = checked, onCheckedChange = { onToggle() })
     }
 }

@@ -51,7 +51,7 @@ object BirthdayNotificationScheduler {
         date: LocalDate,
         message: String
     ) {
-        val triggerAt = date
+        val triggerTime = date
             .atStartOfDay(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
@@ -68,9 +68,10 @@ object BirthdayNotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // ⚠️ NOT exact → avoids Android 14+ crash
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
-            triggerAt,
+            triggerTime,
             pendingIntent
         )
     }
@@ -80,7 +81,7 @@ object BirthdayNotificationScheduler {
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
-            putExtra("title", "Test notification 🎉")
+            putExtra("title", "Test notification 🎂")
             putExtra("text", "This is a test birthday reminder")
         }
 
