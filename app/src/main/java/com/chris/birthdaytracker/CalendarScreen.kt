@@ -1,6 +1,5 @@
 package com.chris.birthdaytracker
 
-import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -242,6 +241,15 @@ private fun BirthdayPopup(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+
+    val soundEnabled by SettingsStore
+        .soundEnabled(context)
+        .collectAsState(initial = true)
+
+    val confettiEnabled by SettingsStore
+        .confettiEnabled(context)
+        .collectAsState(initial = true)
+
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
 
@@ -249,37 +257,27 @@ private fun BirthdayPopup(
         if (it.isBefore(today)) it.plusYears(1) else it
     }
 
-    val daysUntil = ChronoUnit.DAYS.between(today, next)
-    val isToday = daysUntil == 0L
+    val isToday = ChronoUnit.DAYS.between(today, next) == 0L
     val age = next.year - birthday.year
 
-    LaunchedEffect(isToday) {
-        if (isToday) {
+    LaunchedEffect(isToday, soundEnabled) {
+        if (isToday && soundEnabled) {
             playBirthdaySound(context)
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
-    ) {
+    Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
 
-            if (isToday) {
+            if (isToday && confettiEnabled) {
                 KonfettiView(
                     modifier = Modifier
                         .fillMaxSize()
-                        .zIndex(1f), // ⬅️ THIS is the critical fix
+                        .zIndex(2f),
                     parties = listOf(
-
-
-                        // 🎊 MAIN CELEBRATION BURST (top center)
                         Party(
                             speed = 10f,
                             maxSpeed = 45f,
@@ -292,40 +290,27 @@ private fun BirthdayPopup(
                                 0xb48def,
                                 0x6A4C93
                             ),
-                            emitter = Emitter(
-                                duration = 2,
-                                TimeUnit.SECONDS
-                            ).perSecond(220), // 🔥 MORE CONFETTI
+                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(220),
                             position = Position.Relative(0.5, 0.0)
                         ),
-
-                        // 🎊 LEFT SIDE SPRAY
                         Party(
                             speed = 8f,
                             maxSpeed = 35f,
                             damping = 0.9f,
                             spread = 120,
                             colors = listOf(0xff726d, 0xf4306d, 0xb48def),
-                            emitter = Emitter(
-                                duration = 2,
-                                TimeUnit.SECONDS
-                            ).perSecond(120),
+                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(120),
                             position = Position.Relative(-0.05, 0.3)
                         ),
-
-                        // 🎊 RIGHT SIDE SPRAY
                         Party(
                             speed = 8f,
                             maxSpeed = 35f,
                             damping = 0.9f,
-                            spread = 90,
+                            spread = 120,
                             angle = 180,
                             colors = listOf(0xff726d, 0xf4306d, 0xb48def),
-                            emitter = Emitter(
-                                duration = 2,
-                                TimeUnit.SECONDS
-                            ).perSecond(140),
-                            position = Position.Relative(1.12, 0.3)
+                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(140),
+                            position = Position.Relative(1.05, 0.3)
                         )
                     )
                 )
@@ -338,8 +323,7 @@ private fun BirthdayPopup(
                     .wrapContentHeight()
             ) {
                 Column(
-                    modifier = Modifier
-                        .padding(24.dp),
+                    modifier = Modifier.padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
@@ -370,7 +354,9 @@ private fun BirthdayPopup(
                     Spacer(Modifier.height(8.dp))
 
                     Text(
-                        text = birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
+                        text = birthday.format(
+                            DateTimeFormatter.ofPattern("d MMM yyyy")
+                        ),
                         style = MaterialTheme.typography.bodySmall
                     )
 

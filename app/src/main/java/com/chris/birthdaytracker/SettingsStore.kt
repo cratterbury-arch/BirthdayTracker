@@ -9,9 +9,9 @@ private val Context.dataStore by preferencesDataStore("settings")
 
 object SettingsStore {
 
-    val SOUND = booleanPreferencesKey("sound_enabled")
-    val CONFETTI = booleanPreferencesKey("confetti_enabled")
-    val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
+    private val SOUND = booleanPreferencesKey("sound_enabled")
+    private val CONFETTI = booleanPreferencesKey("confetti_enabled")
+    private val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
 
     /* ---------- READ ---------- */
 
@@ -26,15 +26,15 @@ object SettingsStore {
 
     /* ---------- WRITE ---------- */
 
-    suspend fun setSoundEnabled(context: Context, enabled: Boolean) {
+    suspend fun setSound(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[SOUND] = enabled }
     }
 
-    suspend fun setConfettiEnabled(context: Context, enabled: Boolean) {
+    suspend fun setConfetti(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[CONFETTI] = enabled }
     }
 
-    suspend fun setNotificationsEnabled(context: Context, enabled: Boolean) {
+    suspend fun setNotifications(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[NOTIFICATIONS] = enabled }
     }
 }

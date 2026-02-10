@@ -27,16 +27,16 @@ object BirthdayNotificationScheduler {
             val next = birthday.withYear(today.year)
                 .let { if (it.isBefore(today)) it.plusYears(1) else it }
 
-            // 🎂 On the day
-            schedule(
+            // 🎂 ON THE DAY
+            scheduleNotification(
                 context,
                 alarmManager,
                 next,
                 "It's ${contact.name}'s ${next.year - birthday.year} birthday today! 🎉"
             )
 
-            // ⏰ One week before
-            schedule(
+            // ⏰ ONE WEEK BEFORE
+            scheduleNotification(
                 context,
                 alarmManager,
                 next.minusWeeks(1),
@@ -45,7 +45,7 @@ object BirthdayNotificationScheduler {
         }
     }
 
-    private fun schedule(
+    private fun scheduleNotification(
         context: Context,
         alarmManager: AlarmManager,
         date: LocalDate,
@@ -68,7 +68,7 @@ object BirthdayNotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ⚠️ NOT exact → avoids Android 14+ crash
+        // ✅ NOT exact → no Android 14+ crash
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             triggerTime,
@@ -81,7 +81,7 @@ object BirthdayNotificationScheduler {
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
-            putExtra("title", "Test notification 🎂")
+            putExtra("title", "Test Notification 🎂")
             putExtra("text", "This is a test birthday reminder")
         }
 

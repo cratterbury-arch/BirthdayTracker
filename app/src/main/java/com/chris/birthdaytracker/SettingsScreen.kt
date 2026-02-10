@@ -11,21 +11,39 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.graphics.vector.ImageVector
+
 
 @Composable
 fun SettingsScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val soundEnabled by SettingsStore.soundEnabled(context)
+    val soundEnabled by SettingsStore
+        .soundEnabled(context)
         .collectAsState(initial = true)
 
-    val confettiEnabled by SettingsStore.confettiEnabled(context)
+    val confettiEnabled by SettingsStore
+        .confettiEnabled(context)
         .collectAsState(initial = true)
 
-    val notificationsEnabled by SettingsStore.notificationsEnabled(context)
+    val notificationsEnabled by SettingsStore
+        .notificationsEnabled(context)
         .collectAsState(initial = true)
+
+    var testCountdown by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(testCountdown) {
+        if (testCountdown != null) {
+            while (testCountdown!! > 0) {
+                delay(1_000)
+                testCountdown = testCountdown!! - 1
+            }
+            testCountdown = null
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -36,85 +54,112 @@ fun SettingsScreen() {
 
         Text("Settings", style = MaterialTheme.typography.titleLarge)
 
-        SettingToggle(
+        Text("General", style = MaterialTheme.typography.titleMedium)
+
+        IconSwitchRow(
             icon = Icons.Default.VolumeUp,
-            label = "Sound",
-            checked = soundEnabled
-        ) {
-            scope.launch {
-                SettingsStore.setSoundEnabled(context, !soundEnabled)
+            title = "Sound",
+            checked = soundEnabled,
+            onToggle = {
+                scope.launch {
+                    SettingsStore.setSound(context, !soundEnabled)
+                }
             }
-        }
+        )
 
-        SettingToggle(
+        IconSwitchRow(
             icon = Icons.Default.Celebration,
-            label = "Confetti",
-            checked = confettiEnabled
-        ) {
-            scope.launch {
-                SettingsStore.setConfettiEnabled(context, !confettiEnabled)
+            title = "Confetti",
+            checked = confettiEnabled,
+            onToggle = {
+                scope.launch {
+                    SettingsStore.setConfetti(context, !confettiEnabled)
+                }
             }
-        }
-
-        SettingToggle(
-            icon = Icons.Default.Notifications,
-            label = "Notifications",
-            checked = notificationsEnabled
-        ) {
-            scope.launch {
-                SettingsStore.setNotificationsEnabled(context, !notificationsEnabled)
-            }
-        }
+        )
 
         Divider()
 
+        Text("Notifications", style = MaterialTheme.typography.titleMedium)
+
+        IconSwitchRow(
+            icon = Icons.Default.Notifications,
+            title = "Birthday notifications",
+            checked = notificationsEnabled,
+            onToggle = {
+                scope.launch {
+                    SettingsStore.setNotifications(context, !notificationsEnabled)
+                }
+            }
+        )
+
         Button(
-            modifier = Modifier.fillMaxWidth(),
             onClick = {
                 BirthdayNotificationScheduler.scheduleTestNotification(context)
-            }
+                testCountdown = 10
+            },
+            enabled = testCountdown == null,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.NotificationsActive, null)
-            Spacer(Modifier.width(8.dp))
-            Text("Send test notification (10s)")
+            Text(
+                if (testCountdown == null)
+                    "Send test notification (10s)"
+                else
+                    "Sending in ${testCountdown}s…"
+            )
         }
 
         Divider()
 
+        Text("Feedback", style = MaterialTheme.typography.titleMedium)
+
         Button(
-            modifier = Modifier.fillMaxWidth(),
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
                     data = Uri.parse("mailto:youremail@example.com")
-                    putExtra(Intent.EXTRA_SUBJECT, "Birthday Tracker feedback")
+                    putExtra(Intent.EXTRA_SUBJECT, "Birthday Tracker Feedback")
                 }
                 context.startActivity(intent)
-            }
+            },
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Icon(Icons.Default.Email, null)
+            Icon(Icons.Default.Email, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Send feedback")
         }
+
+        Spacer(Modifier.weight(1f))
+
+        Text(
+            getAppVersion(context),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
     }
 }
 
 @Composable
-private fun SettingToggle(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
+private fun IconSwitchRow(
+    icon: ImageVector,
+    title: String,
     checked: Boolean,
     onToggle: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null)
+            Icon(icon, contentDescription = null)
             Spacer(Modifier.width(12.dp))
-            Text(label)
+            Text(title)
         }
         Switch(checked = checked, onCheckedChange = { onToggle() })
     }
+}
+
+private fun getAppVersion(context: android.content.Context): String {
+    val info = context.packageManager.getPackageInfo(context.packageName, 0)
+    return "Version ${info.versionName}"
 }
