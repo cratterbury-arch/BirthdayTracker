@@ -25,10 +25,6 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-import nl.dionsegijn.konfetti.compose.KonfettiView
-import nl.dionsegijn.konfetti.core.Party
-import nl.dionsegijn.konfetti.core.Position
-import nl.dionsegijn.konfetti.core.emitter.Emitter
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
@@ -36,7 +32,6 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.time.temporal.ChronoUnit
 import java.util.Locale
-import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -241,15 +236,6 @@ private fun BirthdayPopup(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-
-    val soundEnabled by SettingsStore
-        .soundEnabled(context)
-        .collectAsState(initial = true)
-
-    val confettiEnabled by SettingsStore
-        .confettiEnabled(context)
-        .collectAsState(initial = true)
-
     val birthday = contact.birthday ?: return
     val today = LocalDate.now()
 
@@ -260,10 +246,12 @@ private fun BirthdayPopup(
     val isToday = ChronoUnit.DAYS.between(today, next) == 0L
     val age = next.year - birthday.year
 
-    LaunchedEffect(isToday, soundEnabled) {
-        if (isToday && soundEnabled) {
-            playBirthdaySound(context)
-        }
+    val confettiEnabled by SettingsStore
+        .confettiEnabled(context)
+        .collectAsState(initial = true)
+
+    LaunchedEffect(isToday) {
+        if (isToday) playBirthdaySound(context)
     }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -273,54 +261,13 @@ private fun BirthdayPopup(
         ) {
 
             if (isToday && confettiEnabled) {
-                KonfettiView(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .zIndex(2f),
-                    parties = listOf(
-                        Party(
-                            speed = 10f,
-                            maxSpeed = 45f,
-                            damping = 0.85f,
-                            spread = 360,
-                            colors = listOf(
-                                0xfce18a,
-                                0xff726d,
-                                0xf4306d,
-                                0xb48def,
-                                0x6A4C93
-                            ),
-                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(220),
-                            position = Position.Relative(0.5, 0.0)
-                        ),
-                        Party(
-                            speed = 8f,
-                            maxSpeed = 35f,
-                            damping = 0.9f,
-                            spread = 120,
-                            colors = listOf(0xff726d, 0xf4306d, 0xb48def),
-                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(120),
-                            position = Position.Relative(-0.05, 0.3)
-                        ),
-                        Party(
-                            speed = 8f,
-                            maxSpeed = 35f,
-                            damping = 0.9f,
-                            spread = 120,
-                            angle = 180,
-                            colors = listOf(0xff726d, 0xf4306d, 0xb48def),
-                            emitter = Emitter(2, TimeUnit.SECONDS).perSecond(140),
-                            position = Position.Relative(1.05, 0.3)
-                        )
-                    )
+                BirthdayCelebrationOverlay(
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
             Card(
-                shape = RoundedCornerShape(24.dp),
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .wrapContentHeight()
+                shape = RoundedCornerShape(24.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -354,9 +301,7 @@ private fun BirthdayPopup(
                     Spacer(Modifier.height(8.dp))
 
                     Text(
-                        text = birthday.format(
-                            DateTimeFormatter.ofPattern("d MMM yyyy")
-                        ),
+                        text = birthday.format(DateTimeFormatter.ofPattern("d MMM yyyy")),
                         style = MaterialTheme.typography.bodySmall
                     )
 

@@ -3,28 +3,25 @@ package com.chris.birthdaytracker
 import android.content.Context
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 private val Context.dataStore by preferencesDataStore("settings")
 
 object SettingsStore {
 
-    private val SOUND = booleanPreferencesKey("sound_enabled")
-    private val CONFETTI = booleanPreferencesKey("confetti_enabled")
-    private val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
+    val SOUND = booleanPreferencesKey("sound_enabled")
+    val CONFETTI = booleanPreferencesKey("confetti_enabled")
+    val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
 
-    /* ---------- READ ---------- */
-
-    fun soundEnabled(context: Context) =
+    fun soundEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[SOUND] ?: true }
 
-    fun confettiEnabled(context: Context) =
+    fun confettiEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[CONFETTI] ?: true }
 
-    fun notificationsEnabled(context: Context) =
+    fun notificationsEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[NOTIFICATIONS] ?: true }
-
-    /* ---------- WRITE ---------- */
 
     suspend fun setSound(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[SOUND] = enabled }
