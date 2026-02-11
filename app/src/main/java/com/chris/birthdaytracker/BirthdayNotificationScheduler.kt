@@ -51,19 +51,31 @@ object BirthdayNotificationScheduler {
         date: LocalDate,
         message: String
     ) {
+        val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
+            putExtra("title", "Birthday Tracker")
+            putExtra("text", message)
+        }
+        val requestCode = message.hashCode()
+
+        val pendingIntentExists = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        ) != null
+
+        if (pendingIntentExists) {
+            return
+        }
+
         val triggerTime = date
             .atStartOfDay(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
 
-        val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
-            putExtra("title", "Birthday Tracker")
-            putExtra("text", message)
-        }
-
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            message.hashCode(),
+            requestCode,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
