@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -34,10 +35,31 @@ fun UpcomingBirthdayCard(
     val isToday = daysToGo == 0
     val ageOnNext = nextBirthday.year - birthday.year
 
-    Card(
-        modifier = Modifier
+    val cardModifier = if (isToday) {
+        Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .border(
+                width = 4.dp,
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color(0xFFF44336),
+                        Color(0xFFFFEB3B),
+                        Color(0xFF4CAF50),
+                        Color(0xFF2196F3),
+                        Color(0xFF9C27B0)
+                    )
+                ),
+                shape = RoundedCornerShape(22.dp)
+            )
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    }
+
+    Card(
+        modifier = cardModifier,
         shape = RoundedCornerShape(22.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
