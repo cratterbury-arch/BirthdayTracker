@@ -18,6 +18,7 @@ fun BirthdaysScreen(
 ) {
     val context = LocalContext.current
     val today = LocalDate.now()
+    var searchText by remember { mutableStateOf("") }
 
     // 🎛 Confetti toggle (SAFE, PUBLIC API)
     val confettiEnabled by SettingsStore
@@ -45,6 +46,10 @@ fun BirthdaysScreen(
             ChronoUnit.DAYS.between(today, next)
         }
 
+    val filteredContacts = sortedContacts.filter {
+        it.name.contains(searchText, ignoreCase = true)
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         // 🎉 CONFETTI — IN FRONT
@@ -54,22 +59,33 @@ fun BirthdaysScreen(
             )
         }
 
-        if (sortedContacts.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("No upcoming birthdays")
-            }
-        } else {
-            LazyColumn(
+        Column(modifier = Modifier.fillMaxSize()) {
+            TextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                label = { Text("Search by name") },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 12.dp)
-            ) {
-                items(sortedContacts) { contact ->
-                    UpcomingBirthdayCard(contact = contact)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            )
+
+            if (filteredContacts.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No upcoming birthdays")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp)
+                ) {
+                    items(filteredContacts) { contact ->
+                        UpcomingBirthdayCard(contact = contact)
+                    }
                 }
             }
         }
