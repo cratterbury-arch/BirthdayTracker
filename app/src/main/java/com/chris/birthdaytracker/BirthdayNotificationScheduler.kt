@@ -51,6 +51,16 @@ object BirthdayNotificationScheduler {
         date: LocalDate,
         message: String
     ) {
+        val triggerTime = date
+            .atStartOfDay(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+        // ⏰ Don't schedule for past events!
+        if (triggerTime < System.currentTimeMillis()) {
+            return
+        }
+
         val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
             putExtra("title", "Birthday Tracker")
             putExtra("text", message)
@@ -67,11 +77,6 @@ object BirthdayNotificationScheduler {
         if (pendingIntentExists) {
             return
         }
-
-        val triggerTime = date
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -99,14 +104,14 @@ object BirthdayNotificationScheduler {
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            9999,
+            "test_notification".hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 10_000,
+            System.currentTimeMillis() + 3000,
             pendingIntent
         )
     }

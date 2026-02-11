@@ -23,7 +23,8 @@
 
         <receiver
             android:name=".BirthdayNotificationReceiver"
-            android:exported="false" />
+            android:exported="false"
+            android:process=":remote" />
 
     </application>
 </manifest>
