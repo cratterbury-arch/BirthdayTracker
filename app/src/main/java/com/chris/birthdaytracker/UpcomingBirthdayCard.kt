@@ -1,5 +1,6 @@
 package com.chris.birthdaytracker
 
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -7,6 +8,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,10 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import coil.compose.AsyncImage
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -27,6 +32,7 @@ import java.time.temporal.ChronoUnit
 fun UpcomingBirthdayCard(
     contact: ContactModel
 ) {
+    val context = LocalContext.current
     val today = LocalDate.now()
     val birthday = contact.birthday ?: return
 
@@ -63,58 +69,86 @@ fun UpcomingBirthdayCard(
         shape = RoundedCornerShape(22.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-
-            BirthdayPhoto(
-                photoUri = contact.photoUri,
-                isToday = isToday
-            )
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            Column(
+        Column {
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .heightIn(min = 72.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
 
-                // Name
-                Text(
-                    text = contact.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                BirthdayPhoto(
+                    photoUri = contact.photoUri,
+                    isToday = isToday
                 )
 
-                // AGE – visual focus
-                Text(
-                    text = "Turning $ageOnNext 🎂",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Start
-                )
+                Spacer(modifier = Modifier.width(16.dp))
 
-                // DOB – quieter, bottom aligned
-                Text(
-                    text = birthday.format(DISPLAY_DATE_FORMAT),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = 72.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+
+                    // Name
+                    Text(
+                        text = contact.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    // AGE – visual focus
+                    Text(
+                        text = "Turning $ageOnNext 🎂",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Start
+                    )
+
+                    // DOB – quieter, bottom aligned
+                    Text(
+                        text = birthday.format(DISPLAY_DATE_FORMAT),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                if (isToday) {
+                    TodayBadge()
+                } else {
+                    DaysToGoCircle(daysToGo)
+                }
             }
 
             if (isToday) {
-                TodayBadge()
-            } else {
-                DaysToGoCircle(daysToGo)
+                Divider(thickness = 1.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+
+                TextButton(
+                    onClick = { launchMessagingIntent(context, contact.id) },
+                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Send,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Wish them a Happy Birthday!")
+                }
             }
         }
     }
+}
+
+private fun launchMessagingIntent(context: android.content.Context, contactId: Long) {
+    val intent = Intent(Intent.ACTION_SENDTO).apply {
+        data = "smsto:${contactId}".toUri()
+        putExtra("sms_body", "Happy birthday!")
+    }
+    val chooser = Intent.createChooser(intent, "send them a birthday message!")
+    context.startActivity(chooser)
 }
 
 /* ---------- Date helpers ---------- */
@@ -220,12 +254,24 @@ private fun TodayBadge() {
             .background(MaterialTheme.colorScheme.primary),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "TODAY 🎉",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 12.sp,
-            textAlign = TextAlign.Center
-        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "TODAY",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "🎉",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
