@@ -20,7 +20,6 @@ fun BirthdaysScreen(
     val today = LocalDate.now()
     var searchText by remember { mutableStateOf("") }
 
-    // 🎛 Confetti toggle (SAFE, PUBLIC API)
     val confettiEnabled by SettingsStore
         .confettiEnabled(context)
         .collectAsState(initial = true)
@@ -28,13 +27,6 @@ fun BirthdaysScreen(
     val birthdaysToday = contacts.filter {
         it.birthday?.month == today.month &&
                 it.birthday?.dayOfMonth == today.dayOfMonth
-    }
-
-    // 🔊 Sound once per screen open
-    LaunchedEffect(birthdaysToday.isNotEmpty()) {
-        if (birthdaysToday.isNotEmpty()) {
-            playBirthdaySound(context)
-        }
     }
 
     val sortedContacts = contacts
@@ -52,7 +44,6 @@ fun BirthdaysScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
 
-        // 🎉 CONFETTI — IN FRONT
         if (birthdaysToday.isNotEmpty() && confettiEnabled) {
             BirthdayCelebrationOverlay(
                 modifier = Modifier.fillMaxSize()

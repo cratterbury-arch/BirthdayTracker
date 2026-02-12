@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @Composable
 fun AppRoot() {
@@ -59,11 +60,26 @@ fun AppRoot() {
     // Load contacts once permission is granted
     LaunchedEffect(hasContactsPermission) {
         if (hasContactsPermission) {
-            contacts = ContactsRepository(context).getAllContacts()
+            val loadedContacts = ContactsRepository(context).getAllContacts()
+            contacts = loadedContacts
 
             // 🔔 Schedule notifications AFTER contacts load
-            BirthdayNotificationScheduler
-                .scheduleBirthdayNotifications(context, contacts)
+            BirthdayNotificationScheduler.scheduleBirthdayNotifications(context, loadedContacts)
+
+            // 🔊 Sound once per session
+            if (!SoundPlaybackManager.hasSoundPlayedThisSession()) {
+                val today = LocalDate.now()
+                val birthdaysToday = loadedContacts.any { contact ->
+                    contact.birthday != null &&
+                    contact.birthday.month == today.month &&
+                    contact.birthday.dayOfMonth == today.dayOfMonth
+                }
+
+                if (birthdaysToday) {
+                    playBirthdaySound(context)
+                    SoundPlaybackManager.markSoundAsPlayedThisSession()
+                }
+            }
         }
     }
 

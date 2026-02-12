@@ -9,7 +9,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
@@ -25,6 +26,8 @@ fun AppScaffold(
     )
 
     val scope = rememberCoroutineScope()
+
+    var selectedContact by rememberSaveable { mutableStateOf<ContactModel?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -69,7 +72,14 @@ fun AppScaffold(
         ) { page ->
             when (page) {
                 0 -> BirthdaysScreen(contacts)
-                1 -> CalendarScreen(contacts)
+                1 -> CalendarScreen(
+                    contacts = contacts,
+                    selectedContact = selectedContact,
+                    onContactSelected = { contact ->
+                        selectedContact = contact
+                    },
+                    onPopupDismissed = { selectedContact = null }
+                )
                 2 -> SettingsScreen()
             }
         }

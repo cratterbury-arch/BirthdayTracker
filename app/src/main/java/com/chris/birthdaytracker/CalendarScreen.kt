@@ -22,7 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.zIndex
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
 import java.time.DayOfWeek
@@ -36,7 +35,10 @@ import java.util.Locale
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun CalendarScreen(
-    contacts: List<ContactModel>
+    contacts: List<ContactModel>,
+    selectedContact: ContactModel?,
+    onContactSelected: (contact: ContactModel) -> Unit,
+    onPopupDismissed: () -> Unit
 ) {
     val today = LocalDate.now()
     val currentMonth = YearMonth.now()
@@ -48,8 +50,6 @@ fun CalendarScreen(
     val currentMonthIndex = months.indexOf(currentMonth).coerceAtLeast(0)
     val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentMonthIndex)
     val scope = rememberCoroutineScope()
-
-    var selectedContact by remember { mutableStateOf<ContactModel?>(null) }
 
     val showJumpFab by remember {
         derivedStateOf { listState.firstVisibleItemIndex != currentMonthIndex }
@@ -68,7 +68,7 @@ fun CalendarScreen(
                         month = month,
                         contacts = contacts,
                         today = today,
-                        onContactClick = { selectedContact = it }
+                        onContactClick = onContactSelected
                     )
                 }
             }
@@ -92,7 +92,7 @@ fun CalendarScreen(
         selectedContact?.let {
             BirthdayPopup(
                 contact = it,
-                onDismiss = { selectedContact = null }
+                onDismiss = onPopupDismissed
             )
         }
     }
@@ -105,7 +105,7 @@ private fun MonthSection(
     month: YearMonth,
     contacts: List<ContactModel>,
     today: LocalDate,
-    onContactClick: (ContactModel) -> Unit
+    onContactClick: (contact: ContactModel) -> Unit
 ) {
     val birthdaysThisMonth = remember(contacts, month) {
         contacts.filter { it.birthday?.month == month.month }
@@ -139,7 +139,7 @@ private fun CalendarGrid(
     month: YearMonth,
     birthdays: List<ContactModel>,
     today: LocalDate,
-    onContactClick: (ContactModel) -> Unit
+    onContactClick: (contact: ContactModel) -> Unit
 ) {
     val firstDay = month.atDay(1)
     val daysInMonth = month.lengthOfMonth()
@@ -174,12 +174,13 @@ private fun CalendarGrid(
                     ) {
                         if (index >= startOffset && day <= daysInMonth) {
                             val contactsToday = birthdayMap[day].orEmpty()
+                            val isToday = today.dayOfMonth == day &&
+                                    today.month == month.month &&
+                                    today.year == month.year
 
                             DayCell(
                                 day = day,
-                                isToday = today.dayOfMonth == day &&
-                                        today.month == month.month &&
-                                        today.year == month.year,
+                                isToday = isToday,
                                 hasBirthday = contactsToday.isNotEmpty(),
                                 onClick = {
                                     contactsToday.firstOrNull()?.let(onContactClick)
@@ -249,10 +250,6 @@ private fun BirthdayPopup(
     val confettiEnabled by SettingsStore
         .confettiEnabled(context)
         .collectAsState(initial = true)
-
-    LaunchedEffect(isToday) {
-        if (isToday) playBirthdaySound(context)
-    }
 
     Dialog(onDismissRequest = onDismiss) {
         Box(
