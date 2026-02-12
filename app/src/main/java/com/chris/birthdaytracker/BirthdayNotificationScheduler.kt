@@ -111,7 +111,7 @@ object BirthdayNotificationScheduler {
 
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 3000,
+            System.currentTimeMillis() + 5000,
             pendingIntent
         )
     }

@@ -96,14 +96,14 @@ fun SettingsScreen() {
         Button(
             onClick = {
                 BirthdayNotificationScheduler.scheduleTestNotification(context)
-                testCountdown = 10
+                testCountdown = 5
             },
             enabled = testCountdown == null,
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
                 if (testCountdown == null)
-                    "Send test notification (10s)"
+                    "Send test notification (5s)"
                 else
                     "Sending in ${testCountdown}s…"
             )
