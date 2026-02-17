@@ -63,9 +63,6 @@ fun AppRoot() {
             val loadedContacts = ContactsRepository(context).getAllContacts()
             contacts = loadedContacts
 
-            // 🔔 Schedule notifications AFTER contacts load
-            BirthdayNotificationScheduler.scheduleBirthdayNotifications(context, loadedContacts)
-
             // 🔊 Sound once per session
             if (!SoundPlaybackManager.hasSoundPlayedThisSession()) {
                 val today = LocalDate.now()

@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 
 object BirthdayNotificationScheduler {
@@ -51,16 +52,6 @@ object BirthdayNotificationScheduler {
         date: LocalDate,
         message: String
     ) {
-        val triggerTime = date
-            .atStartOfDay(ZoneId.systemDefault())
-            .toInstant()
-            .toEpochMilli()
-
-        // ⏰ Don't schedule for past events!
-        if (triggerTime < System.currentTimeMillis()) {
-            return
-        }
-
         val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
             putExtra("title", "Birthday Tracker")
             putExtra("text", message)
@@ -75,6 +66,17 @@ object BirthdayNotificationScheduler {
         ) != null
 
         if (pendingIntentExists) {
+            return // Already scheduled
+        }
+
+        val triggerTime = date
+            .atTime(LocalTime.of(9, 0)) // Set for 9:00 AM
+            .atZone(ZoneId.systemDefault())
+            .toInstant()
+            .toEpochMilli()
+
+        // Don't schedule alarms for the past
+        if (triggerTime < System.currentTimeMillis()) {
             return
         }
 
@@ -85,7 +87,6 @@ object BirthdayNotificationScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // ✅ NOT exact → no Android 14+ crash
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             triggerTime,
@@ -104,14 +105,17 @@ object BirthdayNotificationScheduler {
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            "test_notification".hashCode(),
+            9999,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val triggerAt = System.currentTimeMillis() + 5_000 // 5 seconds
+
+        // Use a standard, inexact alarm to avoid the crash.
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + 5000,
+            triggerAt,
             pendingIntent
         )
     }

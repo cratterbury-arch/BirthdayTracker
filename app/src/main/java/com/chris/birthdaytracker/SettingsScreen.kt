@@ -116,7 +116,7 @@ fun SettingsScreen() {
         Button(
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
-                    data = Uri.parse("mailto:youremail@example.com")
+                    data = Uri.parse("mailto:cratterbury@gmail.com")
                     putExtra(Intent.EXTRA_SUBJECT, "Birthday Tracker Feedback")
                 }
                 context.startActivity(intent)
