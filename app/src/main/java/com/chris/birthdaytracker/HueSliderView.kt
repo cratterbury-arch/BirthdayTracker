@@ -10,9 +10,8 @@ import kotlin.math.min
 
 class HueSliderView @JvmOverloads constructor(
     context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : View(context, attrs, defStyleAttr) {
+    attrs: AttributeSet? = null
+) : View(context, attrs) {
 
     private var hue = 0f
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -44,10 +43,29 @@ class HueSliderView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (width == 0) return true
 
-        hue = min(360f, max(0f, event.x / width * 360f))
-        listener?.invoke(hue)
+        when (event.action) {
+
+            MotionEvent.ACTION_DOWN,
+            MotionEvent.ACTION_MOVE -> {
+
+                parent?.requestDisallowInterceptTouchEvent(true)
+
+                val x = min(width.toFloat(), max(0f, event.x))
+                hue = (x / width) * 360f
+
+                listener?.invoke(hue)
+                invalidate()
+                performClick()
+                return true
+            }
+        }
+
+        return super.onTouchEvent(event)
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
         return true
     }
 }

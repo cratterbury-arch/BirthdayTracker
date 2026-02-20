@@ -3,89 +3,84 @@ package com.chris.birthdaytracker
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.*
-import android.os.Bundle
 import android.widget.RemoteViews
 import androidx.core.content.res.ResourcesCompat
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import kotlin.math.max
 
 class BirthdayWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(
         context: Context,
-        appWidgetManager: AppWidgetManager,
+        manager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (widgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, widgetId)
+        for (id in appWidgetIds) {
+            updateWidget(context, manager, id)
         }
-    }
-
-    override fun onAppWidgetOptionsChanged(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetId: Int,
-        newOptions: Bundle
-    ) {
-        updateWidget(context, appWidgetManager, appWidgetId)
     }
 
     companion object {
 
-        private fun prefs(context: Context, widgetId: Int) =
-            context.getSharedPreferences("widget_$widgetId", Context.MODE_PRIVATE)
+        private const val PREFS = "widget_prefs"
 
-        fun updateWidget(
+        fun refreshAllWidgets(context: Context) {
+            val manager = AppWidgetManager.getInstance(context)
+            val component = ComponentName(context, BirthdayWidgetProvider::class.java)
+            val ids = manager.getAppWidgetIds(component)
+            for (id in ids) {
+                updateWidget(context, manager, id)
+            }
+        }
+
+        private fun updateWidget(
             context: Context,
             manager: AppWidgetManager,
             widgetId: Int
         ) {
 
             val options = manager.getAppWidgetOptions(widgetId)
+
+            val widthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
+            val heightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+
             val density = context.resources.displayMetrics.density
 
-            val minWidthDp =
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH)
-            val minHeightDp =
-                options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT)
+            val widthPx = max((widthDp * density).toInt(), 300)
+            val heightPx = max((heightDp * density).toInt(), 300)
 
-            val width =
-                (minWidthDp * density).toInt().coerceAtLeast(300)
-            val height =
-                (minHeightDp * density).toInt().coerceAtLeast(300)
+            val bitmap = renderWidget(context, widthPx, heightPx)
 
-            val bitmap = renderWidget(context, width, height, widgetId)
-
-            val views =
-                RemoteViews(context.packageName, R.layout.birthday_widget)
-
+            val views = RemoteViews(context.packageName, R.layout.birthday_widget)
             views.setImageViewBitmap(R.id.widget_image, bitmap)
 
-            // MAIN TAP → OPEN APP
+            // Main tap → open app
             val mainIntent = Intent(context, MainActivity::class.java)
-            val mainPendingIntent = PendingIntent.getActivity(
+            val mainPending = PendingIntent.getActivity(
                 context,
                 widgetId,
                 mainIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.widget_image, mainPendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_image, mainPending)
 
-            // SETTINGS TAP → OPEN SETTINGS SCREEN
+            // Top-right tap → open settings
             val settingsIntent = Intent(context, WidgetSettingsActivity::class.java)
             settingsIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
 
-            val settingsPendingIntent = PendingIntent.getActivity(
+            val settingsPending = PendingIntent.getActivity(
                 context,
                 widgetId + 1000,
                 settingsIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            views.setOnClickPendingIntent(R.id.settings_area, settingsPendingIntent)
+            views.setOnClickPendingIntent(R.id.settings_area, settingsPending)
 
             manager.updateAppWidget(widgetId, views)
         }
@@ -93,49 +88,32 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
         private fun renderWidget(
             context: Context,
             width: Int,
-            height: Int,
-            widgetId: Int
+            height: Int
         ): Bitmap {
 
-            if (width <= 0 || height <= 0) {
-                return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
-            }
+            val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-            val prefs = prefs(context, widgetId)
+            val numberColor = prefs.getInt("number_color", Color.WHITE)
+            val textColor = prefs.getInt("text_color", Color.WHITE)
+            val transparency = prefs.getInt("transparency", 60)
+            val backgroundEnabled = prefs.getBoolean("background_enabled", true)
+            val glowEnabled = prefs.getBoolean("glow_enabled", false)
 
-            val numberColor =
-                prefs.getInt("number_color", Color.WHITE)
-
-            val textColor =
-                prefs.getInt("text_color", Color.WHITE)
-
-            val transparency =
-                prefs.getInt("transparency", 60)
-
-            val backgroundEnabled =
-                prefs.getBoolean("background_enabled", true)
-
-            val glowEnabled =
-                prefs.getBoolean("glow_enabled", false)
-
-            val bitmap =
-                Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
 
-            val backgroundAlpha =
-                255 - (transparency / 100f * 255).toInt()
+            val alpha = (transparency / 100f * 255).toInt()
 
             if (backgroundEnabled) {
                 val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                bgPaint.color = Color.argb(backgroundAlpha, 30, 30, 30)
+                bgPaint.color = Color.argb(alpha, 30, 30, 30)
                 canvas.drawRoundRect(
                     0f,
                     0f,
                     width.toFloat(),
                     height.toFloat(),
-                    80f,
-                    80f,
+                    height * 0.06f,
+                    height * 0.06f,
                     bgPaint
                 )
             }
@@ -152,75 +130,65 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                     ChronoUnit.DAYS.between(today, next)
                 }
 
-            if (nextContact == null) {
-                val fallbackPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                fallbackPaint.color = Color.WHITE
-                fallbackPaint.textSize = height * 0.15f
-                fallbackPaint.textAlign = Paint.Align.CENTER
-                canvas.drawText(
-                    "No birthdays",
-                    width / 2f,
-                    height / 2f,
-                    fallbackPaint
-                )
-                return bitmap
-            }
+            if (nextContact == null) return bitmap
 
             val birthDate = nextContact.birthday!!
             val nextBirthday = birthDate.withYear(today.year)
                 .let { if (it.isBefore(today)) it.plusYears(1) else it }
 
-            val days =
-                ChronoUnit.DAYS.between(today, nextBirthday).toInt()
-
-            val age =
-                nextBirthday.year - birthDate.year
+            val days = ChronoUnit.DAYS.between(today, nextBirthday).toInt()
+            val age = nextBirthday.year - birthDate.year
 
             val centerX = width / 2f
             val centerY = height / 2f
 
-            val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            numberPaint.color = numberColor
-            numberPaint.alpha = 220
-            numberPaint.textSize = height * 0.75f
-            numberPaint.textAlign = Paint.Align.CENTER
-            numberPaint.typeface =
-                Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            // ===== BIG NUMBER =====
+
+            val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = numberColor
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                textSize = height * 0.88f
+            }
 
             if (glowEnabled) {
-                numberPaint.setShadowLayer(
-                    40f,
-                    0f,
-                    0f,
-                    numberColor
-                )
+                numberPaint.setShadowLayer(height * 0.05f, 0f, 0f, numberColor)
             }
+
+            val numberBounds = Rect()
+            val numberText = days.toString()
+            numberPaint.getTextBounds(numberText, 0, numberText.length, numberBounds)
+
+            val numberBaseline = centerY + numberBounds.height() / 2f
+
+            canvas.drawText(numberText, centerX, numberBaseline, numberPaint)
+
+            // ===== DAYS =====
+
+            val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = numberColor
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                textSize = height * 0.09f
+            }
+
+            val daysY = numberBaseline + height * 0.08f
+            canvas.drawText("DAYS", centerX, daysY, daysPaint)
+
+            // ===== SCRIPT TEXT (CENTER OVERLAY) =====
 
             val scriptTypeface =
                 ResourcesCompat.getFont(context, R.font.sacramento)
 
-            val scriptPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            scriptPaint.color = textColor
-            scriptPaint.textSize = height * 0.18f
-            scriptPaint.textAlign = Paint.Align.CENTER
-            scriptPaint.typeface = scriptTypeface
-
-            val numberY = centerY + (height * 0.2f)
-
-            canvas.drawText(days.toString(), centerX, numberY, numberPaint)
-
-            val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-            daysPaint.color = numberColor
-            daysPaint.alpha = 200
-            daysPaint.textSize = height * 0.12f
-            daysPaint.textAlign = Paint.Align.CENTER
-            daysPaint.typeface =
-                Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-
-            canvas.drawText("DAYS", centerX, numberY + (height * 0.12f), daysPaint)
+            val scriptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = textColor
+                textAlign = Paint.Align.CENTER
+                typeface = scriptTypeface
+                textSize = height * 0.14f
+            }
 
             canvas.drawText(
-                "${nextContact.name} is $age in...",
+                "${nextContact.name} is $age in",
                 centerX,
                 centerY,
                 scriptPaint
