@@ -5,33 +5,35 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.*
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 
 class WidgetSettingsActivity : AppCompatActivity() {
 
     private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-    private lateinit var prefs: android.content.SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.widget_settings)
 
-        widgetId = intent.getIntExtra(
+        widgetId = intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,
             AppWidgetManager.INVALID_APPWIDGET_ID
-        )
+        ) ?: AppWidgetManager.INVALID_APPWIDGET_ID
 
         if (widgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             finish()
             return
         }
 
-        prefs = getSharedPreferences("widget_$widgetId", Context.MODE_PRIVATE)
+        setResult(Activity.RESULT_CANCELED)
 
         val saveButton = findViewById<Button>(R.id.save_button)
 
         saveButton.setOnClickListener {
+
+            // Example save (we’ll expand shortly)
+            val prefs = getSharedPreferences("widget_$widgetId", Context.MODE_PRIVATE)
 
             prefs.edit()
                 .putInt("number_color", 0xFFFFFFFF.toInt())
@@ -47,9 +49,9 @@ class WidgetSettingsActivity : AppCompatActivity() {
                 widgetId
             )
 
-            val resultValue = Intent()
-            resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-            setResult(Activity.RESULT_OK, resultValue)
+            val resultIntent = Intent()
+            resultIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            setResult(Activity.RESULT_OK, resultIntent)
 
             finish()
         }

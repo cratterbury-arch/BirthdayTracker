@@ -45,7 +45,6 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
         ) {
 
             val options = manager.getAppWidgetOptions(widgetId)
-
             val density = context.resources.displayMetrics.density
 
             val minWidthDp =
@@ -65,16 +64,28 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
 
             views.setImageViewBitmap(R.id.widget_image, bitmap)
 
-            val intent = Intent(context, MainActivity::class.java)
-
-            val pendingIntent = PendingIntent.getActivity(
+            // MAIN TAP → OPEN APP
+            val mainIntent = Intent(context, MainActivity::class.java)
+            val mainPendingIntent = PendingIntent.getActivity(
                 context,
                 widgetId,
-                intent,
+                mainIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_image, mainPendingIntent)
+
+            // SETTINGS TAP → OPEN SETTINGS SCREEN
+            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java)
+            settingsIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+
+            val settingsPendingIntent = PendingIntent.getActivity(
+                context,
+                widgetId + 1000,
+                settingsIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            views.setOnClickPendingIntent(R.id.widget_image, pendingIntent)
+            views.setOnClickPendingIntent(R.id.settings_area, settingsPendingIntent)
 
             manager.updateAppWidget(widgetId, views)
         }
@@ -194,16 +205,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             scriptPaint.textAlign = Paint.Align.CENTER
             scriptPaint.typeface = scriptTypeface
 
-            // Big number
             val numberY = centerY + (height * 0.2f)
-            canvas.drawText(
-                days.toString(),
-                centerX,
-                numberY,
-                numberPaint
-            )
 
-// DAYS under number (tight spacing)
+            canvas.drawText(days.toString(), centerX, numberY, numberPaint)
+
             val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG)
             daysPaint.color = numberColor
             daysPaint.alpha = 200
@@ -212,14 +217,8 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             daysPaint.typeface =
                 Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
-            canvas.drawText(
-                "DAYS",
-                centerX,
-                numberY + (height * 0.12f),
-                daysPaint
-            )
+            canvas.drawText("DAYS", centerX, numberY + (height * 0.12f), daysPaint)
 
-// Front script text centered
             canvas.drawText(
                 "${nextContact.name} is $age in...",
                 centerX,
