@@ -194,15 +194,34 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             scriptPaint.textAlign = Paint.Align.CENTER
             scriptPaint.typeface = scriptTypeface
 
+            // Big number
+            val numberY = centerY + (height * 0.2f)
             canvas.drawText(
                 days.toString(),
                 centerX,
-                centerY + (height * 0.25f),
+                numberY,
                 numberPaint
             )
 
+// DAYS under number (tight spacing)
+            val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+            daysPaint.color = numberColor
+            daysPaint.alpha = 200
+            daysPaint.textSize = height * 0.12f
+            daysPaint.textAlign = Paint.Align.CENTER
+            daysPaint.typeface =
+                Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+
             canvas.drawText(
-                "${nextContact.name} is $age in",
+                "DAYS",
+                centerX,
+                numberY + (height * 0.12f),
+                daysPaint
+            )
+
+// Front script text centered
+            canvas.drawText(
+                "${nextContact.name} is $age in...",
                 centerX,
                 centerY,
                 scriptPaint
