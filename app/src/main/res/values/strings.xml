@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Birthday Tracker</string>
+    <string name="birthday_widget_description">See upcoming birthdays on your home screen</string>
 </resources>

@@ -1,0 +1,28 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Background ring -->
+    <item>
+        <shape android:shape="oval">
+            <stroke
+                android:width="6dp"
+                android:color="#33FFFFFF"/>
+            <solid android:color="@android:color/transparent"/>
+        </shape>
+    </item>
+
+    <!-- Progress ring -->
+    <item>
+        <rotate
+            android:fromDegrees="-90"
+            android:pivotX="50%"
+            android:pivotY="50%">
+            <shape android:shape="oval">
+                <stroke
+                    android:width="6dp"
+                    android:color="#FFD700"/>
+                <solid android:color="@android:color/transparent"/>
+            </shape>
+        </rotate>
+    </item>
+
+</layer-list>
