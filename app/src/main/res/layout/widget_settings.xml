@@ -1,50 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="20dp"
-    android:background="@android:color/black">
+    android:padding="24dp"
+    android:background="?android:colorBackground">
 
-    <ImageView
-        android:id="@+id/preview_image"
-        android:layout_width="match_parent"
-        android:layout_height="140dp"
-        android:scaleType="fitCenter"
-        android:layout_marginBottom="20dp" />
-
-    <CheckBox
-        android:id="@+id/enable_background"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable Frosted Background"
-        android:textColor="@android:color/white" />
-
-    <CheckBox
-        android:id="@+id/enable_glow"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Enable Glow"
-        android:textColor="@android:color/white"
-        android:layout_marginBottom="20dp" />
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Transparency"
-        android:textColor="@android:color/white" />
-
-    <SeekBar
-        android:id="@+id/transparency_seek"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:max="100"
-        android:layout_marginBottom="30dp" />
+        android:orientation="vertical">
 
-    <Button
-        android:id="@+id/save_button"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Save" />
+        <!-- ================= NUMBER SECTION ================= -->
 
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number Colour"
+            android:textSize="18sp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/number_color_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <CheckBox
+            android:id="@+id/enable_number_glow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Number Glow"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number Glow Colour"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/number_glow_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Number Transparency"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/number_alpha_seek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255"
+            android:layout_marginBottom="24dp" />
+
+        <!-- ================= TEXT SECTION ================= -->
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Text Colour"
+            android:textSize="18sp"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/text_color_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <CheckBox
+            android:id="@+id/enable_text_glow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Text Glow"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Text Glow Colour"
+            android:layout_marginBottom="8dp" />
+
+        <LinearLayout
+            android:id="@+id/text_glow_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="16dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Text Transparency"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/text_alpha_seek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="255"
+            android:layout_marginBottom="24dp" />
+
+        <!-- ================= BACKGROUND ================= -->
+
+        <CheckBox
+            android:id="@+id/enable_background"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Enable Frosted Background"
+            android:layout_marginBottom="12dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Background Transparency"
+            android:layout_marginBottom="8dp" />
+
+        <SeekBar
+            android:id="@+id/transparency_seek"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:max="100"
+            android:layout_marginBottom="32dp" />
+
+        <Button
+            android:id="@+id/save_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Save" />
+
+    </LinearLayout>
+</ScrollView>

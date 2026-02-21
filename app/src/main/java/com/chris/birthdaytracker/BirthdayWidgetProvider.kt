@@ -59,7 +59,6 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.birthday_widget)
             views.setImageViewBitmap(R.id.widget_image, bitmap)
 
-            // Main tap → open app
             val mainIntent = Intent(context, MainActivity::class.java)
             val mainPending = PendingIntent.getActivity(
                 context,
@@ -69,9 +68,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_image, mainPending)
 
-            // Top-right tap → open settings
-            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java)
-            settingsIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java).apply {
+                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
 
             val settingsPending = PendingIntent.getActivity(
                 context,
@@ -95,25 +95,34 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
 
             val numberColor = prefs.getInt("number_color", Color.WHITE)
             val textColor = prefs.getInt("text_color", Color.WHITE)
+
+            val numberGlow = prefs.getBoolean("number_glow", false)
+            val textGlow = prefs.getBoolean("text_glow", false)
+
+            val numberGlowColor = prefs.getInt("number_glow_color", numberColor)
+            val textGlowColor = prefs.getInt("text_glow_color", textColor)
+
+            val numberAlpha = prefs.getInt("number_alpha", 255)
+            val textAlpha = prefs.getInt("text_alpha", 255)
+
             val transparency = prefs.getInt("transparency", 60)
             val backgroundEnabled = prefs.getBoolean("background_enabled", true)
-            val glowEnabled = prefs.getBoolean("glow_enabled", false)
 
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
 
-            val alpha = (transparency / 100f * 255).toInt()
+            val bgAlpha = (transparency / 100f * 255).toInt()
 
             if (backgroundEnabled) {
                 val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-                bgPaint.color = Color.argb(alpha, 30, 30, 30)
+                bgPaint.color = Color.argb(bgAlpha, 30, 30, 30)
                 canvas.drawRoundRect(
                     0f,
                     0f,
                     width.toFloat(),
                     height.toFloat(),
-                    height * 0.06f,
-                    height * 0.06f,
+                    height * 0.08f,
+                    height * 0.08f,
                     bgPaint
                 )
             }
@@ -142,49 +151,45 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val centerX = width / 2f
             val centerY = height / 2f
 
-            // ===== BIG NUMBER =====
-
+            // ===== NUMBER =====
             val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = numberColor
+                alpha = numberAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 textSize = height * 0.88f
             }
 
-            if (glowEnabled) {
-                numberPaint.setShadowLayer(height * 0.05f, 0f, 0f, numberColor)
+            if (numberGlow) {
+                numberPaint.setShadowLayer(height * 0.05f, 0f, 0f, numberGlowColor)
             }
 
-            val numberBounds = Rect()
-            val numberText = days.toString()
-            numberPaint.getTextBounds(numberText, 0, numberText.length, numberBounds)
-
-            val numberBaseline = centerY + numberBounds.height() / 2f
-
-            canvas.drawText(numberText, centerX, numberBaseline, numberPaint)
+            canvas.drawText(days.toString(), centerX, centerY + (height * 0.22f), numberPaint)
 
             // ===== DAYS =====
-
             val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = numberColor
+                alpha = numberAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
-                textSize = height * 0.09f
+                textSize = height * 0.08f
             }
 
-            val daysY = numberBaseline + height * 0.08f
-            canvas.drawText("DAYS", centerX, daysY, daysPaint)
+            canvas.drawText("DAYS", centerX, centerY + (height * 0.32f), daysPaint)
 
-            // ===== SCRIPT TEXT (CENTER OVERLAY) =====
-
-            val scriptTypeface =
-                ResourcesCompat.getFont(context, R.font.sacramento)
+            // ===== SCRIPT =====
+            val scriptTypeface = ResourcesCompat.getFont(context, R.font.sacramento)
 
             val scriptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = textColor
+                alpha = textAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = scriptTypeface
-                textSize = height * 0.14f
+                textSize = height * 0.15f
+            }
+
+            if (textGlow) {
+                scriptPaint.setShadowLayer(height * 0.03f, 0f, 0f, textGlowColor)
             }
 
             canvas.drawText(

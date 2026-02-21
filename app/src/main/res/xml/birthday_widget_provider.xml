@@ -6,4 +6,5 @@
     android:updatePeriodMillis="0"
     android:initialLayout="@layout/birthday_widget"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:configure="com.chris.birthdaytracker.WidgetSettingsActivity" />
