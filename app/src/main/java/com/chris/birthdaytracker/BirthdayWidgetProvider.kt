@@ -68,10 +68,9 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_image, mainPending)
 
-            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java).apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
+            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java)
+            settingsIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            settingsIntent.putExtra("from_existing_widget", true)
 
             val settingsPending = PendingIntent.getActivity(
                 context,
@@ -95,18 +94,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
 
             val numberColor = prefs.getInt("number_color", Color.WHITE)
             val textColor = prefs.getInt("text_color", Color.WHITE)
-
             val numberGlow = prefs.getBoolean("number_glow", false)
             val textGlow = prefs.getBoolean("text_glow", false)
-
-            val numberGlowColor = prefs.getInt("number_glow_color", numberColor)
-            val textGlowColor = prefs.getInt("text_glow_color", textColor)
-
-            val numberAlpha = prefs.getInt("number_alpha", 255)
-            val textAlpha = prefs.getInt("text_alpha", 255)
-
-            val transparency = prefs.getInt("transparency", 60)
             val backgroundEnabled = prefs.getBoolean("background_enabled", true)
+            val transparency = prefs.getInt("transparency", 60)
 
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -151,25 +142,21 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val centerX = width / 2f
             val centerY = height / 2f
 
-            // ===== NUMBER =====
             val numberPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = numberColor
-                alpha = numberAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 textSize = height * 0.88f
             }
 
             if (numberGlow) {
-                numberPaint.setShadowLayer(height * 0.05f, 0f, 0f, numberGlowColor)
+                numberPaint.setShadowLayer(height * 0.05f, 0f, 0f, numberColor)
             }
 
             canvas.drawText(days.toString(), centerX, centerY + (height * 0.22f), numberPaint)
 
-            // ===== DAYS =====
             val daysPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = numberColor
-                alpha = numberAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 textSize = height * 0.08f
@@ -177,29 +164,26 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
 
             canvas.drawText("DAYS", centerX, centerY + (height * 0.32f), daysPaint)
 
-            // ===== SCRIPT =====
             val scriptTypeface = ResourcesCompat.getFont(context, R.font.sacramento)
 
             val scriptPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = textColor
-                alpha = textAlpha
                 textAlign = Paint.Align.CENTER
                 typeface = scriptTypeface
                 textSize = height * 0.15f
             }
 
             if (textGlow) {
-                scriptPaint.setShadowLayer(height * 0.03f, 0f, 0f, textGlowColor)
+                scriptPaint.setShadowLayer(height * 0.03f, 0f, 0f, textColor)
             }
 
-            canvas.drawText(
-                "${nextContact.name} is $age in",
-                centerX,
-                centerY,
-                scriptPaint
-            )
+            canvas.drawText("${nextContact.name} is $age in", centerX, centerY, scriptPaint)
 
             return bitmap
+        }
+
+        fun generatePreviewBitmap(context: Context): Bitmap {
+            return renderWidget(context, 800, 500)
         }
     }
 }

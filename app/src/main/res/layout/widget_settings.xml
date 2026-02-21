@@ -2,139 +2,82 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
-    android:background="?android:colorBackground">
+    android:background="@android:color/white"
+    android:padding="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- ================= NUMBER SECTION ================= -->
+        <ImageView
+            android:id="@+id/preview_image"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:scaleType="fitCenter"
+            android:layout_marginBottom="24dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Number Colour"
             android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"/>
 
         <LinearLayout
             android:id="@+id/number_color_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="24dp"/>
 
         <CheckBox
             android:id="@+id/enable_number_glow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Enable Number Glow"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Number Glow Colour"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/number_glow_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Number Transparency"
-            android:layout_marginBottom="8dp" />
-
-        <SeekBar
-            android:id="@+id/number_alpha_seek"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="255"
-            android:layout_marginBottom="24dp" />
-
-        <!-- ================= TEXT SECTION ================= -->
+            android:layout_marginBottom="24dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Text Colour"
             android:textSize="18sp"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"/>
 
         <LinearLayout
             android:id="@+id/text_color_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="16dp" />
+            android:layout_marginBottom="24dp"/>
 
         <CheckBox
             android:id="@+id/enable_text_glow"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Enable Text Glow"
-            android:layout_marginBottom="8dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Text Glow Colour"
-            android:layout_marginBottom="8dp" />
-
-        <LinearLayout
-            android:id="@+id/text_glow_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Text Transparency"
-            android:layout_marginBottom="8dp" />
-
-        <SeekBar
-            android:id="@+id/text_alpha_seek"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="255"
-            android:layout_marginBottom="24dp" />
-
-        <!-- ================= BACKGROUND ================= -->
+            android:layout_marginBottom="24dp"/>
 
         <CheckBox
             android:id="@+id/enable_background"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Enable Frosted Background"
-            android:layout_marginBottom="12dp" />
+            android:layout_marginBottom="12dp"/>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Background Transparency"
-            android:layout_marginBottom="8dp" />
+            android:layout_marginBottom="8dp"/>
 
         <SeekBar
             android:id="@+id/transparency_seek"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:max="100"
-            android:layout_marginBottom="32dp" />
-
-        <Button
-            android:id="@+id/save_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Save" />
+            android:layout_marginBottom="24dp"/>
 
     </LinearLayout>
 </ScrollView>
