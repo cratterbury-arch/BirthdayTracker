@@ -1,122 +1,149 @@
 package com.chris.birthdaytracker
 
-import android.app.Activity
 import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 
 class WidgetSettingsActivity : AppCompatActivity() {
 
     private lateinit var prefs: android.content.SharedPreferences
-    private lateinit var previewImage: ImageView
-
-    private var widgetId = AppWidgetManager.INVALID_APPWIDGET_ID
-
-    private var numberColor = Color.WHITE
-    private var textColor = Color.WHITE
-    private var numberGlow = false
-    private var textGlow = false
-    private var backgroundEnabled = true
-    private var transparency = 60
+    private lateinit var preview: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.widget_settings)
 
-        widgetId = intent.getIntExtra(
-            AppWidgetManager.EXTRA_APPWIDGET_ID,
-            AppWidgetManager.INVALID_APPWIDGET_ID
-        )
-
-        setResult(Activity.RESULT_OK, Intent().putExtra(
-            AppWidgetManager.EXTRA_APPWIDGET_ID,
-            widgetId
-        ))
-
         prefs = getSharedPreferences("widget_prefs", Context.MODE_PRIVATE)
 
-        previewImage = findViewById(R.id.preview_image)
+        preview = findViewById(R.id.preview_image)
 
-        val numberContainer = findViewById<LinearLayout>(R.id.number_color_container)
-        val textContainer = findViewById<LinearLayout>(R.id.text_color_container)
-        val numberGlowToggle = findViewById<CheckBox>(R.id.enable_number_glow)
-        val textGlowToggle = findViewById<CheckBox>(R.id.enable_text_glow)
-        val bgToggle = findViewById<CheckBox>(R.id.enable_background)
-        val transparencySeek = findViewById<SeekBar>(R.id.transparency_seek)
+        setupColourRow(findViewById(R.id.number_color_container), "number_color")
+        setupColourRow(findViewById(R.id.text_color_container), "text_color")
+        setupColourRow(findViewById(R.id.number_glow_color_container), "number_glow_color")
+        setupColourRow(findViewById(R.id.text_glow_color_container), "text_glow_color")
 
-        val swatches = listOf(
-            Color.WHITE, Color.BLACK, Color.RED, Color.BLUE,
-            Color.GREEN, Color.CYAN, Color.MAGENTA, Color.YELLOW
-        )
+        bindCheckBox(R.id.enable_number_glow, "number_glow")
+        bindCheckBox(R.id.enable_text_glow, "text_glow")
+        bindCheckBox(R.id.enable_background, "background_enabled")
 
-        swatches.forEach { color ->
-            numberContainer.addView(createSwatch(color) {
-                numberColor = color
-                applyChanges()
-            })
+        bindSeekBar(R.id.number_alpha_seek, "number_alpha", 255)
+        bindSeekBar(R.id.text_alpha_seek, "text_alpha", 255)
+        bindSeekBar(R.id.glow_intensity_seek, "glow_intensity", 50)
+        bindSeekBar(R.id.transparency_seek, "transparency", 60)
 
-            textContainer.addView(createSwatch(color) {
-                textColor = color
-                applyChanges()
-            })
+        updatePreview()
+    }
+
+    private fun bindCheckBox(id: Int, key: String) {
+        val box = findViewById<CheckBox>(id)
+        box.isChecked = prefs.getBoolean(key, false)
+
+        box.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean(key, isChecked).apply()
+            refreshWidgets()
+            updatePreview()
         }
+    }
 
-        numberGlowToggle.setOnCheckedChangeListener { _, isChecked ->
-            numberGlow = isChecked
-            applyChanges()
-        }
+    private fun bindSeekBar(id: Int, key: String, default: Int) {
+        val bar = findViewById<SeekBar>(id)
+        bar.progress = prefs.getInt(key, default)
 
-        textGlowToggle.setOnCheckedChangeListener { _, isChecked ->
-            textGlow = isChecked
-            applyChanges()
-        }
-
-        bgToggle.setOnCheckedChangeListener { _, isChecked ->
-            backgroundEnabled = isChecked
-            applyChanges()
-        }
-
-        transparencySeek.setOnSeekBarChangeListener(object :
-            SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                transparency = progress
-                applyChanges()
+        bar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(
+                seekBar: SeekBar?,
+                progress: Int,
+                fromUser: Boolean
+            ) {
+                prefs.edit().putInt(key, progress).apply()
+                refreshWidgets()
+                updatePreview()
             }
+
             override fun onStartTrackingTouch(seekBar: SeekBar?) {}
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
-
-        applyChanges()
     }
 
-    private fun applyChanges() {
-        prefs.edit()
-            .putInt("number_color", numberColor)
-            .putInt("text_color", textColor)
-            .putBoolean("number_glow", numberGlow)
-            .putBoolean("text_glow", textGlow)
-            .putBoolean("background_enabled", backgroundEnabled)
-            .putInt("transparency", transparency)
-            .apply()
+    private fun setupColourRow(container: LinearLayout, key: String) {
 
+        val colours = listOf(
+
+            // Neutral
+            0xFFFFFFFF.toInt(), // White
+            0xFF000000.toInt(), // Black
+
+            // 🔥 Bold Primary Set
+            0xFFFF0000.toInt(), // Red
+            0xFF00FF00.toInt(), // Green
+            0xFF0000FF.toInt(), // Blue
+            0xFFFFFF00.toInt(), // Yellow
+            0xFFFF9800.toInt(), // Orange
+            0xFF9C27B0.toInt(), // Purple
+            0xFF00BCD4.toInt(), // Cyan
+            0xFF3F51B5.toInt(), // Indigo
+
+            // 🌸 Pastel Set
+            0xFFFFC107.toInt(),
+            0xFFE91E63.toInt(),
+            0xFFB39DDB.toInt(),
+            0xFF80CBC4.toInt(),
+            0xFFFFAB91.toInt(),
+            0xFFA5D6A7.toInt(),
+            0xFF90CAF9.toInt()
+        )
+
+        val selected = prefs.getInt(key, colours.first())
+
+        container.removeAllViews()
+
+        colours.forEach { colour ->
+
+            val drawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 16f
+                setColor(colour)
+
+                // Default border
+                setStroke(6, Color.BLACK)
+
+                // Selected border
+                if (colour == selected) {
+                    setStroke(12, Color.parseColor("#6200EE"))
+                }
+            }
+
+            val swatch = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+                    setMargins(20, 20, 20, 20)
+                }
+                background = drawable
+
+                setOnClickListener {
+                    prefs.edit().putInt(key, colour).apply()
+                    refreshWidgets()
+                    updatePreview()
+                    setupColourRow(container, key)
+                }
+            }
+
+            container.addView(swatch)
+        }
+    }
+
+    private fun refreshWidgets() {
         BirthdayWidgetProvider.refreshAllWidgets(this)
-        previewImage.setImageBitmap(
+    }
+
+    private fun updatePreview() {
+        preview.setImageBitmap(
             BirthdayWidgetProvider.generatePreviewBitmap(this)
         )
-    }
-
-    private fun createSwatch(color: Int, onClick: () -> Unit): ImageView {
-        val size = 100
-        return ImageView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(size, size).apply {
-                rightMargin = 16
-            }
-            setBackgroundColor(color)
-            setOnClickListener { onClick() }
-        }
     }
 }
