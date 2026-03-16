@@ -7,4 +7,5 @@
     android:initialLayout="@layout/birthday_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
     android:configure="com.chris.birthdaytracker.WidgetSettingsActivity" />
