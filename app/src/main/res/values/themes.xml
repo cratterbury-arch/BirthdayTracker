@@ -7,13 +7,13 @@
 
     <!-- Splash Theme -->
     <style name="Theme.BirthdayTracker.Splash" parent="Theme.SplashScreen">
-
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-
         <item name="windowSplashScreenAnimatedIcon">@drawable/splashscreen</item>
-
         <item name="postSplashScreenTheme">@style/Theme.BirthdayTracker</item>
+    </style>
 
+    <!-- Widget Settings Theme -->
+    <style name="Theme.BirthdayTracker.WidgetSettings" parent="Theme.Material3.DayNight.NoActionBar">
     </style>
 
 </resources>

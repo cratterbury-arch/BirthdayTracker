@@ -3,6 +3,8 @@ package com.chris.birthdaytracker
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 
 
 @Composable
@@ -32,6 +35,10 @@ fun SettingsScreen() {
     val notificationsEnabled by SettingsStore
         .notificationsEnabled(context)
         .collectAsState(initial = true)
+
+    val currentTheme by SettingsStore
+        .getTheme(context)
+        .collectAsState(initial = "system")
 
     var testCountdown by remember { mutableStateOf<Int?>(null) }
 
@@ -74,6 +81,20 @@ fun SettingsScreen() {
             onToggle = {
                 scope.launch {
                     SettingsStore.setConfetti(context, !confettiEnabled)
+                }
+            }
+        )
+
+        Divider()
+
+        Text("Theme", style = MaterialTheme.typography.titleMedium)
+        
+        ThemeSelectionSection(
+            currentTheme = currentTheme,
+            onThemeSelected = { theme ->
+                scope.launch {
+                    SettingsStore.setTheme(context, theme)
+                    BirthdayApplication.applyTheme(theme)
                 }
             }
         )
@@ -135,6 +156,45 @@ fun SettingsScreen() {
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Composable
+private fun ThemeSelectionSection(
+    currentTheme: String,
+    onThemeSelected: (String) -> Unit
+) {
+    val options = listOf(
+        "light" to "Light",
+        "dark" to "Dark",
+        "system" to "Match System"
+    )
+
+    Column(Modifier.selectableGroup()) {
+        options.forEach { (value, label) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .selectable(
+                        selected = (value == currentTheme),
+                        onClick = { onThemeSelected(value) },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = (value == currentTheme),
+                    onClick = null // null recommended for accessibility with selectable modifier
+                )
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(start = 16.dp)
+                )
+            }
+        }
     }
 }
 

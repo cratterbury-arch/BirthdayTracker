@@ -100,8 +100,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             
             val numberGlowEnabled = prefs.getBoolean("number_glow", false)
             val textGlowEnabled = prefs.getBoolean("text_glow", false)
-            val numberIntensity = prefs.getInt("number_glow_intensity", 50).toFloat().coerceAtLeast(5f)
-            val textIntensity = prefs.getInt("text_glow_intensity", 50).toFloat().coerceAtLeast(5f)
+            
+            // Scaling intensity for better visibility (0-100 range -> 0.1-25 radius)
+            val numberRadius = (prefs.getInt("number_glow_intensity", 50) / 4f).coerceAtLeast(0.1f)
+            val textRadius = (prefs.getInt("text_glow_intensity", 50) / 4f).coerceAtLeast(0.1f)
 
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -160,8 +162,8 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 }
 
                 if (numberGlowEnabled) {
-                    val glowColor = prefs.getInt("number_glow_color", numberColor)
-                    setShadowLayer(numberIntensity, 0f, 0f, glowColor)
+                    val glowColor = prefs.getInt("number_glow_color", prefs.getInt("number_color", Color.WHITE))
+                    setShadowLayer(numberRadius, 0f, 0f, glowColor)
                 }
             }
 
@@ -172,8 +174,9 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 typeface = scriptTypeface
                 
                 if (textGlowEnabled) {
-                   val glowColor = prefs.getInt("text_glow_color", textColor)
-                   setShadowLayer(textIntensity, 0f, 0f, glowColor)
+                   // Use opaque color for glow default to ensure visibility
+                   val glowColor = prefs.getInt("text_glow_color", prefs.getInt("text_color", Color.WHITE))
+                   setShadowLayer(textRadius, 0f, 0f, glowColor)
                 }
             }
 
@@ -188,6 +191,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                     textSize = height * 0.08f
                     textAlign = Paint.Align.CENTER
                     typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+                    if (numberGlowEnabled) {
+                        val glowColor = prefs.getInt("number_glow_color", prefs.getInt("number_color", Color.WHITE))
+                        setShadowLayer(numberRadius, 0f, 0f, glowColor)
+                    }
                 }
                 canvas.drawText("DAYS", centerX, centerY + numberSize / 3 + daysPaint.textSize * 1.1f, daysPaint)
                 canvas.drawText("$name is $age in", centerX, centerY + numberSize / 12f, scriptPaint)
@@ -206,8 +213,10 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val backgroundEnabled = prefs.getBoolean("background_enabled", true)
             val numberGlowEnabled = prefs.getBoolean("number_glow", false)
             val textGlowEnabled = prefs.getBoolean("text_glow", false)
-            val numberIntensity = prefs.getInt("number_glow_intensity", 50).toFloat().coerceAtLeast(5f)
-            val textIntensity = prefs.getInt("text_glow_intensity", 50).toFloat().coerceAtLeast(5f)
+            
+            // Scaling intensity for better visibility (0-100 range -> 0.1-25 radius)
+            val numberRadius = (prefs.getInt("number_glow_intensity", 50) / 4f).coerceAtLeast(0.1f)
+            val textRadius = (prefs.getInt("text_glow_intensity", 50) / 4f).coerceAtLeast(0.1f)
 
             val width = 600
             val height = 400
@@ -229,8 +238,8 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
                 textAlign = Paint.Align.CENTER
                 if (numberGlowEnabled) {
-                    val glowColor = prefs.getInt("number_glow_color", numberColor)
-                    setShadowLayer(numberIntensity, 0f, 0f, glowColor)
+                    val glowColor = prefs.getInt("number_glow_color", prefs.getInt("number_color", Color.WHITE))
+                    setShadowLayer(numberRadius, 0f, 0f, glowColor)
                 }
             }
 
@@ -240,8 +249,8 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 typeface = scriptTypeface
                 textAlign = Paint.Align.CENTER
                 if (textGlowEnabled) {
-                    val glowColor = prefs.getInt("text_glow_color", textColor)
-                    setShadowLayer(textIntensity, 0f, 0f, glowColor)
+                    val glowColor = prefs.getInt("text_glow_color", prefs.getInt("text_color", Color.WHITE))
+                    setShadowLayer(textRadius, 0f, 0f, glowColor)
                 }
             }
 

@@ -13,6 +13,7 @@ object SettingsStore {
     val SOUND = booleanPreferencesKey("sound_enabled")
     val CONFETTI = booleanPreferencesKey("confetti_enabled")
     val NOTIFICATIONS = booleanPreferencesKey("notifications_enabled")
+    val THEME = stringPreferencesKey("theme")
 
     fun soundEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[SOUND] ?: true }
@@ -22,6 +23,9 @@ object SettingsStore {
 
     fun notificationsEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[NOTIFICATIONS] ?: true }
+
+    fun getTheme(context: Context): Flow<String> =
+        context.dataStore.data.map { it[THEME] ?: "system" }
 
     suspend fun setSound(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[SOUND] = enabled }
@@ -33,5 +37,9 @@ object SettingsStore {
 
     suspend fun setNotifications(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun setTheme(context: Context, theme: String) {
+        context.dataStore.edit { it[THEME] = theme }
     }
 }

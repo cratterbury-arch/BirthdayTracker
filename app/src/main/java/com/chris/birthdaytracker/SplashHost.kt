@@ -1,18 +1,19 @@
 package com.chris.birthdaytracker
 
 import androidx.compose.runtime.*
-import kotlinx.coroutines.delay
+import com.chris.birthdaytracker.ui.theme.BirthdayTrackerTheme
 
 @Composable
 fun SplashHost() {
+    BirthdayTrackerTheme {
+        var showSplash by remember { mutableStateOf(true) }
 
-    var showSplash by remember { mutableStateOf(true) }
-
-    if (showSplash) {
-        AnimatedSplashScreen {
-            showSplash = false
+        if (showSplash) {
+            AnimatedSplashScreen {
+                showSplash = false
+            }
+        } else {
+            AppRoot()
         }
-    } else {
-        AppRoot()
     }
 }

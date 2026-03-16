@@ -2,8 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="24dp"
-    android:background="@android:color/white">
+    android:padding="24dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -89,7 +88,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#DDDDDD"
+            android:background="?android:attr/dividerVertical"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
@@ -165,7 +164,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#DDDDDD"
+            android:background="?android:attr/dividerVertical"
             android:layout_marginTop="24dp"
             android:layout_marginBottom="24dp" />
 
