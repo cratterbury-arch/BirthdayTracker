@@ -26,6 +26,7 @@ fun AppRoot() {
     }
 
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
 
     // Contacts permission launcher
     val contactsPermissionLauncher =
@@ -40,6 +41,15 @@ fun AppRoot() {
         rememberLauncherForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { }
+
+    val refreshContacts = {
+        scope.launch {
+            isLoading = true
+            val loadedContacts = ContactsRepository(context).getAllContacts()
+            contacts = loadedContacts
+            isLoading = false
+        }
+    }
 
     LaunchedEffect(Unit) {
         // 🔔 Notifications permission
@@ -87,6 +97,10 @@ fun AppRoot() {
             )
         }
     } else {
-        AppScaffold(contacts)
+        AppScaffold(
+            contacts = contacts,
+            onRefresh = { refreshContacts() },
+            isRefreshing = isLoading
+        )
     }
 }

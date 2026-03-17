@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -142,7 +143,7 @@ fun UpcomingBirthdayCard(
     }
 }
 
-private fun launchMessagingIntent(context: android.content.Context, contactId: Long) {
+private fun launchMessagingIntent(context: android.content.Context, contactId: String) {
     val intent = Intent(Intent.ACTION_SENDTO).apply {
         data = "smsto:${contactId}".toUri()
         putExtra("sms_body", "Happy birthday!")
@@ -192,6 +193,7 @@ private fun BirthdayPhoto(
         AsyncImage(
             model = photoUri,
             contentDescription = null,
+            contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
     }
@@ -232,7 +234,7 @@ private fun DaysToGoCircle(days: Int) {
             )
 
             Text(
-                text = "days",
+                text = if (days == 1) "day" else "days",
                 fontSize = 9.sp,
                 lineHeight = 9.sp,
                 color = plum

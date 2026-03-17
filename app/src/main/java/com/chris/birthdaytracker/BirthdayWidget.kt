@@ -30,50 +30,60 @@ class BirthdayWidget : GlanceAppWidget() {
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        val repository = ContactsRepository(context)
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
 
-        val contacts = if (
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.READ_CONTACTS
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            ContactsRepository(context).getAllContacts()
-        } else emptyList()
+        val allContacts = if (hasPermission) {
+            repository.getAllContacts()
+        } else {
+            repository.getLocalContacts()
+        }
 
         val today = LocalDate.now()
-
-        val nextContact = contacts
+        
+        // Ensure we handle dates correctly even if year is missing (phone contacts)
+        val upcoming = allContacts
             .filter { it.birthday != null }
-            .minByOrNull { contact ->
-                val next = contact.birthday!!
-                    .withYear(today.year)
-                    .let { if (it.isBefore(today)) it.plusYears(1) else it }
-                ChronoUnit.DAYS.between(today, next)
+            .map { 
+                val bday = it.birthday!!
+                // Use a consistent comparison year to avoid logic issues
+                val next = bday.withYear(today.year).let { date ->
+                    if (date.isBefore(today)) date.plusYears(1) else date
+                }
+                it to next
             }
+            .sortedBy { ChronoUnit.DAYS.between(today, it.second) }
+
+        val nextBirthdays = if (upcoming.isNotEmpty()) {
+            val closestDate = upcoming.first().second
+            upcoming.filter { it.second.isEqual(closestDate) }.map { it.first }
+        } else emptyList()
 
         provideContent {
-            WidgetContent(nextContact)
+            WidgetContent(nextBirthdays)
         }
     }
 
     @Composable
-    private fun WidgetContent(contact: ContactModel?) {
-
+    private fun WidgetContent(contacts: List<ContactModel>) {
         val size = LocalSize.current
 
         Box(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .padding(6.dp) // minimal padding
+                .padding(6.dp)
                 .clickable(actionStartActivity<MainActivity>())
         ) {
-
-            if (contact == null) {
+            if (contacts.isEmpty()) {
                 Text("No birthdays")
                 return@Box
             }
 
-            val (days, age) = calculate(contact)
+            val firstContact = contacts.first()
+            val (days, age) = calculate(firstContact)
 
             val bigSize = when {
                 size.width < 150.dp -> 64.sp
@@ -104,7 +114,6 @@ class BirthdayWidget : GlanceAppWidget() {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-
                 Text(
                     text = if (days == 0) "0" else "$days",
                     style = TextStyle(
@@ -124,39 +133,53 @@ class BirthdayWidget : GlanceAppWidget() {
                 )
             }
 
-            // Foreground elegant line
+            // Foreground content
             Column(
                 modifier = GlanceModifier.fillMaxSize(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val nameText = when {
+                    contacts.size == 1 -> {
+                        val name = extractFirstName(contacts[0].name)
+                        if (days == 0) "$name is $age today" else "$name is $age in"
+                    }
+                    contacts.size == 2 -> {
+                        val name1 = extractFirstName(contacts[0].name)
+                        val name2 = extractFirstName(contacts[1].name)
+                        if (days == 0) "$name1 & $name2 today!" else "$name1 & $name2 in"
+                    }
+                    else -> {
+                        if (days == 0) "${contacts.size} birthdays today!" else "${contacts.size} birthdays in"
+                    }
+                }
 
                 Text(
-                    text = if (days == 0)
-                        "${contact.name} is $age today"
-                    else
-                        "${contact.name} is $age in",
+                    text = nameText,
                     style = TextStyle(
                         fontSize = frontSize,
                         fontWeight = FontWeight.Medium,
-                        color = frontColor
+                        color = frontColor,
+                        textAlign = TextAlign.Center
                     )
                 )
             }
         }
     }
-}
 
-private fun calculate(contact: ContactModel): Pair<Int, Int> {
+    private fun extractFirstName(fullName: String): String {
+        // More aggressive split to handle various whitespace characters
+        return fullName.trim()
+            .split(Regex("[\\s\\u00A0\\t\\r\\n]+"))
+            .firstOrNull { it.isNotEmpty() } ?: fullName
+    }
 
-    val today = LocalDate.now()
-    val birthday = contact.birthday!!
-
-    val nextBirthday = birthday.withYear(today.year)
-        .let { if (it.isBefore(today)) it.plusYears(1) else it }
-
-    val days = ChronoUnit.DAYS.between(today, nextBirthday).toInt()
-    val age = nextBirthday.year - birthday.year
-
-    return Pair(days, age)
+    private fun calculate(contact: ContactModel): Pair<Int, Int> {
+        val today = LocalDate.now()
+        val birthday = contact.birthday!!
+        val nextBirthday = birthday.withYear(today.year).let { if (it.isBefore(today)) it.plusYears(1) else it }
+        val days = ChronoUnit.DAYS.between(today, nextBirthday).toInt()
+        val age = nextBirthday.year - birthday.year
+        return Pair(days, age)
+    }
 }

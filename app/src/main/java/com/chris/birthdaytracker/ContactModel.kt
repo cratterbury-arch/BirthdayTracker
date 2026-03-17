@@ -7,8 +7,9 @@ import java.time.LocalDate
 
 @Parcelize
 data class ContactModel(
-    val id: Long,
+    val id: String,
     val name: String,
     val birthday: LocalDate?,
-    val photoUri: Uri?
+    val photoUri: Uri?,
+    val isFromPhone: Boolean = false
 ) : Parcelable

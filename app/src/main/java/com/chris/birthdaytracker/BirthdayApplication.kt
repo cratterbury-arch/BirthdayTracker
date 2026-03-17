@@ -1,7 +1,9 @@
 package com.chris.birthdaytracker
 
 import android.app.Application
+import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.room.Room
 import androidx.work.*
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.first
@@ -13,6 +15,8 @@ class BirthdayApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         
+        instance = this
+
         // Apply theme early
         val scope = MainScope()
         scope.launch {
@@ -36,6 +40,23 @@ class BirthdayApplication : Application() {
     }
 
     companion object {
+        private var instance: BirthdayApplication? = null
+        private var database: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return database ?: synchronized(this) {
+                val db = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "birthday_tracker_db"
+                )
+                .fallbackToDestructiveMigration()
+                .build()
+                database = db
+                db
+            }
+        }
+
         fun applyTheme(theme: String) {
             val mode = when (theme) {
                 "light" -> AppCompatDelegate.MODE_NIGHT_NO

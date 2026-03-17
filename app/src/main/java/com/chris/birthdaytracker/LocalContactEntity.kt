@@ -9,5 +9,6 @@ data class LocalContactEntity(
     @PrimaryKey val id: String,
     val name: String,
     val birthday: LocalDate,
-    val isFromPhone: Boolean = false
+    val isFromPhone: Boolean = false,
+    val photoUri: String? = null
 )

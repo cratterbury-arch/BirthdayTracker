@@ -3,17 +3,19 @@ package com.chris.birthdaytracker
 import android.content.Context
 import android.graphics.*
 import androidx.core.content.res.ResourcesCompat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 object WidgetRenderer {
 
-    fun render(
+    suspend fun render(
         context: Context,
         widthPx: Int,
         heightPx: Int,
         widgetId: Int
-    ): Bitmap {
+    ): Bitmap = withContext(Dispatchers.IO) {
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -37,7 +39,7 @@ object WidgetRenderer {
                     .withYear(today.year)
                     .let { if (it.isBefore(today)) it.plusYears(1) else it }
                 ChronoUnit.DAYS.between(today, next)
-            } ?: return bitmap
+            } ?: return@withContext bitmap
 
         val birthday = nextContact.birthday!!
         val nextBirthday = birthday.withYear(today.year)
@@ -91,6 +93,6 @@ object WidgetRenderer {
             scriptPaint
         )
 
-        return bitmap
+        bitmap
     }
 }

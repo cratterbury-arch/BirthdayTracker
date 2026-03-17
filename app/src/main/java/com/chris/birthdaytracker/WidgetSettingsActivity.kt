@@ -10,6 +10,8 @@ import android.os.Bundle
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class WidgetSettingsActivity : AppCompatActivity() {
 
@@ -130,6 +132,9 @@ class WidgetSettingsActivity : AppCompatActivity() {
     }
 
     private fun updatePreview() {
-        preview.setImageBitmap(BirthdayWidgetProvider.generatePreviewBitmap(this))
+        lifecycleScope.launch {
+            val bitmap = BirthdayWidgetProvider.generatePreviewBitmap(this@WidgetSettingsActivity)
+            preview.setImageBitmap(bitmap)
+        }
     }
 }
