@@ -132,7 +132,25 @@ fun SettingsScreen() {
 
         Divider()
 
-        Text("Feedback", style = MaterialTheme.typography.titleMedium)
+        Text("About", style = MaterialTheme.typography.titleMedium)
+
+        Button(
+            onClick = {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://cratterbury.github.io/BirthdayTracker/privacy-policy.html")
+                }
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        ) {
+            Icon(Icons.Default.PrivacyTip, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Privacy Policy")
+        }
 
         Button(
             onClick = {

@@ -21,18 +21,20 @@
 #-renamesourcefileattribute SourceFile
 
 # Fix for R8 warnings regarding missing default constructor patterns
--keep public class com.google.vending.licensing.ILicensingService { <init>(); }
--keep public class com.android.vending.licensing.ILicensingService { <init>(); }
--keep public class com.google.android.vending.licensing.ILicensingService { <init>(); }
--keep class android.support.annotation.Keep { <init>(); }
--keep public class * extends androidx.glance.appwidget.action.ActionCallback { <init>(); }
--keep,allowshrinking class * extends androidx.compose.ui.node.ModifierNodeElement { <init>(); }
--keep class * extends androidx.work.Worker { <init>(); }
--keep class * extends androidx.work.InputMerger { <init>(); }
--keep class androidx.work.WorkerParameters { <init>(); }
--keep class * extends androidx.room.RoomDatabase { <init>(); }
--keep class * implements androidx.versionedparcelable.VersionedParcelable { <init>(); }
--keep public class androidx.versionedparcelable.ParcelImpl { <init>(); }
--keep,allowshrinking class okhttp3.internal.publicsuffix.PublicSuffixDatabase { <init>(); }
--keep,allowshrinking class * extends androidx.startup.Initializer { <init>(); }
--keep,allowobfuscation @interface androidx.annotation.Keep { <init>(); }
+# Using the recommended { void <init>(); } pattern for all reported classes
+
+-keep public class com.google.vending.licensing.ILicensingService { void <init>(); }
+-keep public class com.android.vending.licensing.ILicensingService { void <init>(); }
+-keep public class com.google.android.vending.licensing.ILicensingService { void <init>(); }
+-keep class android.support.annotation.Keep { void <init>(); }
+-keep public class * extends androidx.glance.appwidget.action.ActionCallback { void <init>(); }
+-keep,allowshrinking class * extends androidx.compose.ui.node.ModifierNodeElement { void <init>(); }
+-keep class * extends androidx.work.Worker { void <init>(); }
+-keep class * extends androidx.work.InputMerger { void <init>(); }
+-keep class androidx.work.WorkerParameters { void <init>(); }
+-keep class * extends androidx.room.RoomDatabase { void <init>(); }
+-keep class * implements androidx.versionedparcelable.VersionedParcelable { void <init>(); }
+-keep public class androidx.versionedparcelable.ParcelImpl { void <init>(); }
+-keep,allowshrinking class okhttp3.internal.publicsuffix.PublicSuffixDatabase { void <init>(); }
+-keep,allowshrinking class * extends androidx.startup.Initializer { void <init>(); }
+-keep,allowobfuscation @interface androidx.annotation.Keep { void <init>(); }
