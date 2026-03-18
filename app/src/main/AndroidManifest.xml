@@ -46,6 +46,10 @@
                 android:resource="@xml/birthday_widget_provider" />
         </receiver>
 
+        <receiver
+            android:name=".BirthdayNotificationReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>
