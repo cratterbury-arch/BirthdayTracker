@@ -137,7 +137,7 @@ fun SettingsScreen() {
         Button(
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://cratterbury.github.io/BirthdayTracker/privacy-policy.html")
+                    data = Uri.parse("https://cratterbury-arch.github.io/BirthdayTracker/")
                 }
                 context.startActivity(intent)
             },

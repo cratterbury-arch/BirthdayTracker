@@ -13,8 +13,8 @@ android {
         applicationId = "com.chris.birthdaytracker"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 6
+        versionName = "1.5"
     }
 
     buildFeatures {
@@ -29,6 +29,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            ndk {
+                debugSymbolLevel = "full"
+            }
         }
     }
 

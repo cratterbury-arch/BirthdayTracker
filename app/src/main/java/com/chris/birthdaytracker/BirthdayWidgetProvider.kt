@@ -1,5 +1,6 @@
 package com.chris.birthdaytracker
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -12,6 +13,8 @@ import android.widget.RemoteViews
 import androidx.core.content.res.ResourcesCompat
 import kotlinx.coroutines.*
 import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class BirthdayWidgetProvider : AppWidgetProvider() {
@@ -27,9 +30,17 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 for (id in appWidgetIds) {
                     updateWidget(context, manager, id)
                 }
+                scheduleMidnightUpdate(context)
             } finally {
                 pendingResult.finish()
             }
+        }
+    }
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == ACTION_MIDNIGHT_UPDATE) {
+            refreshAllWidgets(context)
         }
     }
 
@@ -45,6 +56,7 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        private const val ACTION_MIDNIGHT_UPDATE = "com.chris.birthdaytracker.ACTION_MIDNIGHT_UPDATE"
 
         fun refreshAllWidgets(context: Context) {
             val manager = AppWidgetManager.getInstance(context)
@@ -55,7 +67,34 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 for (id in ids) {
                     updateWidget(context, manager, id)
                 }
+                scheduleMidnightUpdate(context)
             }
+        }
+
+        private fun scheduleMidnightUpdate(context: Context) {
+            val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val intent = Intent(context, BirthdayWidgetProvider::class.java).apply {
+                action = ACTION_MIDNIGHT_UPDATE
+            }
+            
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val midnight = LocalDate.now().plusDays(1)
+                .atTime(LocalTime.MIDNIGHT)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                midnight,
+                pendingIntent
+            )
         }
 
         suspend fun generatePreviewBitmap(context: Context): Bitmap {
@@ -74,7 +113,6 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val displayMetrics = context.resources.displayMetrics
             val density = displayMetrics.density
             
-            // Generate bitmap based on widget size to ensure it scales correctly
             val width = (minWidth * density * 2.5f).toInt().coerceAtLeast(300)
             val height = (minHeight * density * 2.5f).toInt().coerceAtLeast(200)
 
@@ -83,15 +121,15 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.birthday_widget)
             views.setImageViewBitmap(R.id.widget_image, bitmap)
 
-            val settingsIntent = Intent(context, WidgetSettingsActivity::class.java).apply {
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+            // Changed to MainActivity to open the app instead of settings
+            val appIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             
             val pendingIntent = PendingIntent.getActivity(
                 context,
                 widgetId,
-                settingsIntent,
+                appIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
@@ -194,7 +232,6 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Auto-scale "TODAY" or the number if they're too wide
             val maxTextWidth = width * 0.85f
             val textToMeasure = if (isToday) "TODAY" else days.toString()
             var textWidth = numberPaint.measureText(textToMeasure)
@@ -233,7 +270,6 @@ class BirthdayWidgetProvider : AppWidgetProvider() {
                 }
             }
 
-            // Auto-scale nameText if it's too wide
             val maxScriptNameWidth = width * 0.9f
             var scriptNameWidth = scriptPaint.measureText(nameText)
             while (scriptNameWidth > maxScriptNameWidth && scriptPaint.textSize > 10f) {
