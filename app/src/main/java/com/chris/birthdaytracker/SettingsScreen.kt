@@ -3,8 +3,10 @@ package com.chris.birthdaytracker
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -55,6 +57,7 @@ fun SettingsScreen() {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
@@ -137,7 +140,7 @@ fun SettingsScreen() {
         Button(
             onClick = {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    data = Uri.parse("https://cratterbury-arch.github.io/BirthdayTracker/")
+                    data = Uri.parse("https://cratterbury-arch.github.io/BirthdayTracker/privacy-policy.html")
                 }
                 context.startActivity(intent)
             },
@@ -167,7 +170,7 @@ fun SettingsScreen() {
             Text("Send feedback")
         }
 
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(16.dp))
 
         Text(
             getAppVersion(context),
