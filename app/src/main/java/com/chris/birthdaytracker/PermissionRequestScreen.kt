@@ -10,8 +10,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun PermissionRequestScreen(
@@ -40,19 +42,29 @@ fun PermissionRequestScreen(
             Image(
                 painter = painterResource(id = R.drawable.splashscreen),
                 contentDescription = null,
-                modifier = Modifier.size(180.dp)
+                modifier = Modifier.size(160.dp)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
             Text(
-                text = "To keep track of birthdays, we need access to your contacts.",
-                style = MaterialTheme.typography.bodyLarge,
+                text = "Sync Your Birthdays",
+                style = MaterialTheme.typography.headlineSmall,
                 color = Color.White,
-                textAlign = TextAlign.Center
+                fontWeight = FontWeight.Bold
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "Connect your device accounts to automatically import birthdays from your contacts and Google Calendar.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.LightGray,
+                textAlign = TextAlign.Center,
+                lineHeight = 22.sp
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
 
             Button(
                 onClick = onRequest,
@@ -60,19 +72,38 @@ fun PermissionRequestScreen(
                     containerColor = Color(0xFF6200EE),
                     contentColor = Color.White
                 ),
-                modifier = Modifier.fillMaxWidth(0.7f)
+                modifier = Modifier.fillMaxWidth(0.8f).height(56.dp),
+                shape = MaterialTheme.shapes.medium
             ) {
-                Text("Get Started")
+                Text("Connect Google Account", fontWeight = FontWeight.Bold)
             }
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
             
-            Text(
-                text = "We only use this to show upcoming birthdays and never upload your data.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White.copy(alpha = 0.05f)
+                ),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_lock_idle_lock),
+                        contentDescription = null,
+                        tint = Color.Gray,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Your data stays private on your device and is never uploaded to our servers.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
         }
     }
 }

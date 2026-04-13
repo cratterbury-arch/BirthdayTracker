@@ -1,5 +1,6 @@
 package com.chris.birthdaytracker
 
+import android.accounts.AccountManager
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
@@ -13,8 +14,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -41,6 +45,14 @@ fun SettingsScreen() {
     val currentTheme by SettingsStore
         .getTheme(context)
         .collectAsState(initial = "system")
+
+    val googleAccounts = remember {
+        try {
+            AccountManager.get(context).getAccountsByType("com.google").map { it.name }
+        } catch (e: Exception) {
+            emptyList<String>()
+        }
+    }
 
     var testCountdown by remember { mutableStateOf<Int?>(null) }
 
@@ -101,6 +113,37 @@ fun SettingsScreen() {
                 }
             }
         )
+
+        Divider()
+
+        Text("Connected Accounts", style = MaterialTheme.typography.titleMedium)
+        
+        if (googleAccounts.isEmpty()) {
+            Text(
+                "No Google accounts found on device.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        } else {
+            googleAccounts.forEach { email ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                ) {
+                    Icon(
+                        Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(email, style = MaterialTheme.typography.bodyLarge)
+                        Text("Syncing contacts & calendar", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    }
+                }
+            }
+        }
 
         Divider()
 

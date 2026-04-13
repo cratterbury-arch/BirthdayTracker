@@ -25,16 +25,25 @@ fun AppRoot() {
         )
     }
 
+    var hasCalendarPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CALENDAR
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Contacts permission launcher
-    val contactsPermissionLauncher =
-        rememberLauncherForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { granted ->
-            hasContactsPermission = granted
-        }
+    // Combined permission launcher
+    val permissionsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        hasContactsPermission = permissions[Manifest.permission.READ_CONTACTS] ?: hasContactsPermission
+        hasCalendarPermission = permissions[Manifest.permission.READ_CALENDAR] ?: hasCalendarPermission
+    }
 
     // Notification permission launcher (Android 13+)
     val notificationPermissionLauncher =
@@ -59,17 +68,20 @@ fun AppRoot() {
             )
         }
 
-        // 📇 Contacts permission
-        if (!hasContactsPermission) {
-            contactsPermissionLauncher.launch(
-                Manifest.permission.READ_CONTACTS
+        // Request initial permissions
+        if (!hasContactsPermission || !hasCalendarPermission) {
+            permissionsLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.READ_CALENDAR
+                )
             )
         }
     }
 
     // Load contacts once permission is granted
-    LaunchedEffect(hasContactsPermission) {
-        if (hasContactsPermission) {
+    LaunchedEffect(hasContactsPermission, hasCalendarPermission) {
+        if (hasContactsPermission || hasCalendarPermission) {
             val loadedContacts = ContactsRepository(context).getAllContacts()
             contacts = loadedContacts
 
@@ -90,10 +102,13 @@ fun AppRoot() {
         }
     }
 
-    if (!hasContactsPermission) {
+    if (!hasContactsPermission && !hasCalendarPermission) {
         PermissionRequestScreen {
-            contactsPermissionLauncher.launch(
-                Manifest.permission.READ_CONTACTS
+            permissionsLauncher.launch(
+                arrayOf(
+                    Manifest.permission.READ_CONTACTS,
+                    Manifest.permission.READ_CALENDAR
+                )
             )
         }
     } else {

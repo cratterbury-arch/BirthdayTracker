@@ -5,11 +5,16 @@ import android.os.Parcelable
 import kotlinx.parcelize.Parcelize
 import java.time.LocalDate
 
+enum class ContactSource {
+    LOCAL, PHONE, CALENDAR
+}
+
 @Parcelize
 data class ContactModel(
     val id: String,
     val name: String,
     val birthday: LocalDate?,
     val photoUri: Uri?,
-    val isFromPhone: Boolean = false
+    val source: ContactSource = ContactSource.LOCAL,
+    val isFromPhone: Boolean = false // Keep for backward compatibility if needed
 ) : Parcelable
