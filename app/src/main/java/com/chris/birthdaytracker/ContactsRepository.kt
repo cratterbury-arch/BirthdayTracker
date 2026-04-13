@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.CalendarContract
 import android.provider.ContactsContract
+import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -19,12 +20,12 @@ class ContactsRepository(private val context: Context) {
     )
 
     suspend fun getAllContacts(): List<ContactModel> {
-        val phoneContacts = getPhoneContacts()
-        val calendarContacts = getCalendarBirthdays()
+        val disabledAccounts = SettingsStore.disabledAccounts(context).first()
+        
+        val phoneContacts = getPhoneContacts().filter { it.accountName !in disabledAccounts }
+        val calendarContacts = getCalendarBirthdays().filter { it.accountName !in disabledAccounts }
         val localContacts = getLocalContacts()
         
-        // Return everything, let the UI or a use case handle deduplication if needed
-        // Or handle it here but keep track of duplicates
         return localContacts + phoneContacts + calendarContacts
     }
 
@@ -41,7 +42,8 @@ class ContactsRepository(private val context: Context) {
             ContactsContract.Data.CONTACT_ID,
             ContactsContract.Data.DISPLAY_NAME,
             ContactsContract.CommonDataKinds.Event.START_DATE,
-            ContactsContract.Data.PHOTO_URI
+            ContactsContract.Data.PHOTO_URI,
+            ContactsContract.RawContacts.ACCOUNT_NAME
         )
 
         val selection =
@@ -64,12 +66,14 @@ class ContactsRepository(private val context: Context) {
             val nameIndex = it.getColumnIndexOrThrow(ContactsContract.Data.DISPLAY_NAME)
             val dateIndex = it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Event.START_DATE)
             val photoIndex = it.getColumnIndexOrThrow(ContactsContract.Data.PHOTO_URI)
+            val accountIndex = it.getColumnIndexOrThrow(ContactsContract.RawContacts.ACCOUNT_NAME)
 
             while (it.moveToNext()) {
                 val id = it.getLong(idIndex).toString()
                 val name = it.getString(nameIndex) ?: continue
                 val dateString = it.getString(dateIndex)
                 val photoUri = it.getString(photoIndex)?.let { Uri.parse(it) }
+                val accountName = it.getString(accountIndex)
 
                 contacts.add(
                     ContactModel(
@@ -78,6 +82,7 @@ class ContactsRepository(private val context: Context) {
                         birthday = parseDate(dateString),
                         photoUri = photoUri,
                         source = ContactSource.PHONE,
+                        accountName = accountName,
                         isFromPhone = true
                     )
                 )
@@ -98,7 +103,8 @@ class ContactsRepository(private val context: Context) {
         val projection = arrayOf(
             CalendarContract.Events._ID,
             CalendarContract.Events.TITLE,
-            CalendarContract.Events.DTSTART
+            CalendarContract.Events.DTSTART,
+            CalendarContract.Calendars.OWNER_ACCOUNT
         )
 
         val selection = "${CalendarContract.Events.TITLE} LIKE ?"
@@ -114,11 +120,13 @@ class ContactsRepository(private val context: Context) {
             val idIndex = it.getColumnIndexOrThrow(CalendarContract.Events._ID)
             val titleIndex = it.getColumnIndexOrThrow(CalendarContract.Events.TITLE)
             val dateIndex = it.getColumnIndexOrThrow(CalendarContract.Events.DTSTART)
+            val ownerIndex = it.getColumnIndexOrThrow(CalendarContract.Calendars.OWNER_ACCOUNT)
 
             while (it.moveToNext()) {
                 val id = "cal_" + it.getLong(idIndex).toString()
                 val title = it.getString(titleIndex) ?: continue
                 val dtStart = it.getLong(dateIndex)
+                val accountName = it.getString(ownerIndex)
                 
                 val name = title.replace("'s Birthday", "", ignoreCase = true)
                                 .replace("Birthday", "", ignoreCase = true)
@@ -139,6 +147,7 @@ class ContactsRepository(private val context: Context) {
                         birthday = birthday,
                         photoUri = null,
                         source = ContactSource.CALENDAR,
+                        accountName = accountName,
                         isFromPhone = false
                     )
                 )
@@ -170,6 +179,7 @@ class ContactsRepository(private val context: Context) {
                 birthday = entity.birthday,
                 photoUri = entity.photoUri?.let { Uri.parse(it) },
                 source = ContactSource.LOCAL,
+                accountName = "Local App",
                 isFromPhone = false
             )
         }

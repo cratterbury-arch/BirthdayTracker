@@ -108,12 +108,27 @@ fun UpcomingBirthdayCard(
                         textAlign = TextAlign.Start
                     )
 
-                    // DOB – quieter, bottom aligned
-                    Text(
-                        text = birthday.format(DISPLAY_DATE_FORMAT),
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // Source & DOB info
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = birthday.format(DISPLAY_DATE_FORMAT),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        contact.accountName?.let { account ->
+                            Spacer(Modifier.width(8.dp))
+                            Text("•", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = account,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.secondary,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
 
                 if (isToday) {
@@ -175,7 +190,7 @@ private fun BirthdayPhoto(
 ) {
     val scale by rememberInfiniteTransition(label = "pulse").animateFloat(
         initialValue = 1f,
-        targetValue = if (isToday) 1.08f else 1f,
+        targetValue = if (isToday) { 1.08f } else { 1f },
         animationSpec = infiniteRepeatable(
             animation = tween(900, easing = EaseInOut),
             repeatMode = RepeatMode.Reverse

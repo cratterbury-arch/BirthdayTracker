@@ -16,5 +16,6 @@ data class ContactModel(
     val birthday: LocalDate?,
     val photoUri: Uri?,
     val source: ContactSource = ContactSource.LOCAL,
-    val isFromPhone: Boolean = false // Keep for backward compatibility if needed
+    val accountName: String? = null,
+    val isFromPhone: Boolean = false
 ) : Parcelable

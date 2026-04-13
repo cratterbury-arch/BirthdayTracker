@@ -46,6 +46,10 @@ fun SettingsScreen() {
         .getTheme(context)
         .collectAsState(initial = "system")
 
+    val disabledAccounts by SettingsStore
+        .disabledAccounts(context)
+        .collectAsState(initial = emptySet())
+
     val googleAccounts = remember {
         try {
             AccountManager.get(context).getAccountsByType("com.google").map { it.name }
@@ -126,21 +130,39 @@ fun SettingsScreen() {
             )
         } else {
             googleAccounts.forEach { email ->
+                val isEnabled = email !in disabledAccounts
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                 ) {
                     Icon(
                         Icons.Default.AccountCircle,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
+                        tint = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
+                        modifier = Modifier.size(32.dp)
                     )
                     Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text(email, style = MaterialTheme.typography.bodyLarge)
-                        Text("Syncing contacts & calendar", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = email,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (isEnabled) Color.Unspecified else Color.Gray
+                        )
+                        Text(
+                            text = if (isEnabled) "Syncing contacts & calendar" else "Sync disabled",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray
+                        )
                     }
+                    Switch(
+                        checked = isEnabled,
+                        onCheckedChange = {
+                            scope.launch {
+                                SettingsStore.toggleAccount(context, email)
+                                BirthdayWidgetProvider.refreshAllWidgets(context)
+                            }
+                        }
+                    )
                 }
             }
         }
