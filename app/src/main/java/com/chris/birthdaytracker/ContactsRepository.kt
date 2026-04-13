@@ -20,13 +20,39 @@ class ContactsRepository(private val context: Context) {
     )
 
     suspend fun getAllContacts(): List<ContactModel> {
-        val disabledAccounts = SettingsStore.disabledAccounts(context).first()
+        val enabledCalendarAccounts = SettingsStore.enabledCalendarAccounts(context).first()
+        val disabledPhoneAccounts = SettingsStore.disabledPhoneAccounts(context).first()
         
-        val phoneContacts = getPhoneContacts().filter { it.accountName !in disabledAccounts }
-        val calendarContacts = getCalendarBirthdays().filter { it.accountName !in disabledAccounts }
+        // 1. Local App entries (always shown)
         val localContacts = getLocalContacts()
         
-        return localContacts + phoneContacts + calendarContacts
+        // 2. Phone contacts (shown unless explicitly disabled)
+        val phoneContacts = getPhoneContacts().filter { 
+            it.accountName == null || it.accountName !in disabledPhoneAccounts
+        }
+        
+        // 3. Calendar birthdays (shown only if explicitly enabled)
+        val calendarContacts = getCalendarBirthdays().filter { 
+            it.accountName in enabledCalendarAccounts 
+        }
+        
+        // 4. Combine and Deduplicate
+        val allRaw = localContacts + phoneContacts + calendarContacts
+        val uniqueContacts = mutableListOf<ContactModel>()
+        val seenKeys = mutableSetOf<String>()
+
+        for (contact in allRaw) {
+            val birthday = contact.birthday ?: continue
+            val normalizedName = contact.name.lowercase().trim()
+            val key = "${normalizedName}_${birthday.monthValue}_${birthday.dayOfMonth}"
+            
+            if (!seenKeys.contains(key)) {
+                uniqueContacts.add(contact)
+                seenKeys.add(key)
+            }
+        }
+        
+        return uniqueContacts
     }
 
     private fun getPhoneContacts(): List<ContactModel> {
@@ -99,12 +125,33 @@ class ContactsRepository(private val context: Context) {
             return emptyList()
         }
 
+        val holidayCalendarIds = mutableSetOf<Long>()
+        val calCursor = try {
+            context.contentResolver.query(
+                CalendarContract.Calendars.CONTENT_URI,
+                arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME),
+                null, null, null
+            )
+        } catch (e: Exception) { null }
+
+        calCursor?.use {
+            val idIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars._ID)
+            val nameIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            while (it.moveToNext()) {
+                val name = it.getString(nameIdx) ?: ""
+                if (name.contains("Holidays", ignoreCase = true)) {
+                    holidayCalendarIds.add(it.getLong(idIdx))
+                }
+            }
+        }
+
         val uri = CalendarContract.Events.CONTENT_URI
         val projection = arrayOf(
             CalendarContract.Events._ID,
             CalendarContract.Events.TITLE,
             CalendarContract.Events.DTSTART,
-            CalendarContract.Calendars.OWNER_ACCOUNT
+            CalendarContract.Calendars.OWNER_ACCOUNT,
+            CalendarContract.Events.CALENDAR_ID
         )
 
         val selection = "${CalendarContract.Events.TITLE} LIKE ?"
@@ -121,34 +168,40 @@ class ContactsRepository(private val context: Context) {
             val titleIndex = it.getColumnIndexOrThrow(CalendarContract.Events.TITLE)
             val dateIndex = it.getColumnIndexOrThrow(CalendarContract.Events.DTSTART)
             val ownerIndex = it.getColumnIndexOrThrow(CalendarContract.Calendars.OWNER_ACCOUNT)
+            val calIdIndex = it.getColumnIndexOrThrow(CalendarContract.Events.CALENDAR_ID)
 
             while (it.moveToNext()) {
-                val id = "cal_" + it.getLong(idIndex).toString()
+                val calId = it.getLong(calIdIndex)
+                if (calId in holidayCalendarIds) continue 
+
                 val title = it.getString(titleIndex) ?: continue
+                if (title.contains("King's Birthday", ignoreCase = true)) continue
+                if (title.contains("Queen's Birthday", ignoreCase = true)) continue
+                if (title.contains("Bank Holiday", ignoreCase = true)) continue
+                
+                val lowercaseTitle = title.lowercase()
+                if (lowercaseTitle == "my birthday" || lowercaseTitle == "birthday" || lowercaseTitle == "happy birthday" || lowercaseTitle == "happy birthday!") continue
+
+                val id = "cal_" + it.getLong(idIndex).toString()
                 val dtStart = it.getLong(dateIndex)
                 val accountName = it.getString(ownerIndex)
                 
-                val name = title.replace("'s Birthday", "", ignoreCase = true)
-                                .replace("Birthday", "", ignoreCase = true)
-                                .trim()
+                val extractedName = title.replace("'s Birthday", "", ignoreCase = true).replace("Birthday", "", ignoreCase = true).trim()
+                if (extractedName.isEmpty() || extractedName.lowercase() == "my") continue
 
                 val calendar = Calendar.getInstance()
                 calendar.timeInMillis = dtStart
-                val birthday = LocalDate.of(
-                    calendar.get(Calendar.YEAR),
-                    calendar.get(Calendar.MONTH) + 1,
-                    calendar.get(Calendar.DAY_OF_MONTH)
-                )
+                val birthday = LocalDate.of(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH))
 
                 contacts.add(
                     ContactModel(
                         id = id,
-                        name = if (name.isNotEmpty()) name else title,
+                        name = extractedName,
                         birthday = birthday,
                         photoUri = null,
                         source = ContactSource.CALENDAR,
                         accountName = accountName,
-                        isFromPhone = false
+                        isFromPhone = true
                     )
                 )
             }

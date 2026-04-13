@@ -108,27 +108,12 @@ fun UpcomingBirthdayCard(
                         textAlign = TextAlign.Start
                     )
 
-                    // Source & DOB info
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = birthday.format(DISPLAY_DATE_FORMAT),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        
-                        contact.accountName?.let { account ->
-                            Spacer(Modifier.width(8.dp))
-                            Text("•", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = account,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.secondary,
-                                maxLines = 1
-                            )
-                        }
-                    }
+                    // DOB info
+                    Text(
+                        text = birthday.format(DISPLAY_DATE_FORMAT),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
 
                 if (isToday) {

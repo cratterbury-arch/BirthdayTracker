@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +32,7 @@ fun AppScaffold(
     val scope = rememberCoroutineScope()
     var selectedContact by rememberSaveable { mutableStateOf<ContactModel?>(null) }
     var showAddContact by remember { mutableStateOf(false) }
+    var preselectedDate by remember { mutableStateOf<LocalDate?>(null) }
 
     Scaffold(
         bottomBar = {
@@ -64,9 +66,12 @@ fun AppScaffold(
             }
         },
         floatingActionButton = {
-            if (pagerState.currentPage == 0) {
+            if (pagerState.currentPage == 0 || pagerState.currentPage == 1) {
                 FloatingActionButton(
-                    onClick = { showAddContact = true },
+                    onClick = { 
+                        preselectedDate = null
+                        showAddContact = true 
+                    },
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ) {
@@ -92,21 +97,30 @@ fun AppScaffold(
                     onContactSelected = { contact ->
                         selectedContact = contact
                     },
+                    onDateSelected = { date ->
+                        preselectedDate = date
+                        showAddContact = true
+                    },
                     onPopupDismissed = { selectedContact = null }
                 )
-                2 -> SettingsScreen()
+                2 -> SettingsScreen(onDataChanged = onRefresh)
             }
         }
 
         if (showAddContact) {
             ModalBottomSheet(
-                onDismissRequest = { showAddContact = false },
+                onDismissRequest = { 
+                    showAddContact = false 
+                    preselectedDate = null
+                },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
             ) {
                 EditContactScreen(
-                    contact = null, // null means adding new
+                    contact = null,
+                    initialDate = preselectedDate,
                     onDone = {
                         showAddContact = false
+                        preselectedDate = null
                         onRefresh()
                     }
                 )

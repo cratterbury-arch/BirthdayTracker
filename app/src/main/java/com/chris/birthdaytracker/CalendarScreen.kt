@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +39,7 @@ fun CalendarScreen(
     contacts: List<ContactModel>,
     selectedContact: ContactModel?,
     onContactSelected: (contact: ContactModel) -> Unit,
+    onDateSelected: (LocalDate) -> Unit,
     onPopupDismissed: () -> Unit
 ) {
     val today = LocalDate.now()
@@ -68,7 +70,8 @@ fun CalendarScreen(
                         month = month,
                         contacts = contacts,
                         today = today,
-                        onContactClick = onContactSelected
+                        onContactClick = onContactSelected,
+                        onDateClick = onDateSelected
                     )
                 }
             }
@@ -83,7 +86,7 @@ fun CalendarScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(24.dp),
+                    .padding(bottom = 24.dp, end = 24.dp),
                 icon = { Icon(Icons.Default.Today, contentDescription = null) },
                 text = { Text("Back to Today") }
             )
@@ -105,7 +108,8 @@ private fun MonthSection(
     month: YearMonth,
     contacts: List<ContactModel>,
     today: LocalDate,
-    onContactClick: (contact: ContactModel) -> Unit
+    onContactClick: (contact: ContactModel) -> Unit,
+    onDateClick: (LocalDate) -> Unit
 ) {
     val birthdaysThisMonth = remember(contacts, month) {
         contacts.filter { it.birthday?.month == month.month }
@@ -127,7 +131,8 @@ private fun MonthSection(
             month = month,
             birthdays = birthdaysThisMonth,
             today = today,
-            onContactClick = onContactClick
+            onContactClick = onContactClick,
+            onDateClick = onDateClick
         )
     }
 }
@@ -139,7 +144,8 @@ private fun CalendarGrid(
     month: YearMonth,
     birthdays: List<ContactModel>,
     today: LocalDate,
-    onContactClick: (contact: ContactModel) -> Unit
+    onContactClick: (contact: ContactModel) -> Unit,
+    onDateClick: (LocalDate) -> Unit
 ) {
     val firstDay = month.atDay(1)
     val daysInMonth = month.lengthOfMonth()
@@ -177,13 +183,19 @@ private fun CalendarGrid(
                             val isToday = today.dayOfMonth == day &&
                                     today.month == month.month &&
                                     today.year == month.year
+                            
+                            val currentDate = month.atDay(day)
 
                             DayCell(
                                 day = day,
                                 isToday = isToday,
                                 hasBirthday = contactsToday.isNotEmpty(),
                                 onClick = {
-                                    contactsToday.firstOrNull()?.let(onContactClick)
+                                    if (contactsToday.isNotEmpty()) {
+                                        onContactClick(contactsToday.first())
+                                    } else {
+                                        onDateClick(currentDate)
+                                    }
                                 }
                             )
                             day++
@@ -217,7 +229,7 @@ private fun DayCell(
                     else -> Color.Transparent
                 }
             )
-            .clickable(enabled = hasBirthday) { onClick() },
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Text(

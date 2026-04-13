@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -26,7 +27,7 @@ import androidx.compose.ui.semantics.Role
 
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onDataChanged: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -46,8 +47,12 @@ fun SettingsScreen() {
         .getTheme(context)
         .collectAsState(initial = "system")
 
-    val disabledAccounts by SettingsStore
-        .disabledAccounts(context)
+    val enabledCalendarAccounts by SettingsStore
+        .enabledCalendarAccounts(context)
+        .collectAsState(initial = emptySet())
+
+    val disabledPhoneAccounts by SettingsStore
+        .disabledPhoneAccounts(context)
         .collectAsState(initial = emptySet())
 
     val googleAccounts = remember {
@@ -120,7 +125,9 @@ fun SettingsScreen() {
 
         Divider()
 
-        Text("Connected Accounts", style = MaterialTheme.typography.titleMedium)
+        Text("Birthday Sources", style = MaterialTheme.typography.titleMedium)
+        Text("By default, we import birthdays from your phone's address book. You can also sync specific Google Calendars below.", 
+            style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         
         if (googleAccounts.isEmpty()) {
             Text(
@@ -130,39 +137,48 @@ fun SettingsScreen() {
             )
         } else {
             googleAccounts.forEach { email ->
-                val isEnabled = email !in disabledAccounts
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                val calendarEnabled = email in enabledCalendarAccounts
+                val phoneDisabled = email in disabledPhoneAccounts
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
-                    Icon(
-                        Icons.Default.AccountCircle,
-                        contentDescription = null,
-                        tint = if (isEnabled) MaterialTheme.colorScheme.primary else Color.Gray,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = email,
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (isEnabled) Color.Unspecified else Color.Gray
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.AccountCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(8.dp))
+                            Text(email, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        }
+                        
+                        Spacer(Modifier.height(8.dp))
+
+                        IconSwitchRow(
+                            icon = Icons.Default.ContactPage,
+                            title = "Phone Contacts",
+                            checked = !phoneDisabled,
+                            onToggle = {
+                                scope.launch {
+                                    SettingsStore.togglePhoneAccount(context, email)
+                                    onDataChanged()
+                                    BirthdayWidgetProvider.refreshAllWidgets(context)
+                                }
+                            }
                         )
-                        Text(
-                            text = if (isEnabled) "Syncing contacts & calendar" else "Sync disabled",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+
+                        IconSwitchRow(
+                            icon = Icons.Default.CalendarToday,
+                            title = "Google Calendar",
+                            checked = calendarEnabled,
+                            onToggle = {
+                                scope.launch {
+                                    SettingsStore.toggleCalendarAccount(context, email)
+                                    onDataChanged()
+                                    BirthdayWidgetProvider.refreshAllWidgets(context)
+                                }
+                            }
                         )
                     }
-                    Switch(
-                        checked = isEnabled,
-                        onCheckedChange = {
-                            scope.launch {
-                                SettingsStore.toggleAccount(context, email)
-                                BirthdayWidgetProvider.refreshAllWidgets(context)
-                            }
-                        }
-                    )
                 }
             }
         }
@@ -297,11 +313,15 @@ private fun IconSwitchRow(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null)
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(12.dp))
-            Text(title)
+            Text(title, fontSize = 14.sp)
         }
-        Switch(checked = checked, onCheckedChange = { onToggle() })
+        Switch(
+            checked = checked, 
+            onCheckedChange = { onToggle() },
+            modifier = Modifier.scale(0.8f)
+        )
     }
 }
 

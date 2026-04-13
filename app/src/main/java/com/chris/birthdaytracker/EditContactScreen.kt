@@ -5,27 +5,33 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Source
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
@@ -37,6 +43,7 @@ import java.util.*
 @Composable
 fun EditContactScreen(
     contact: ContactModel?,
+    initialDate: LocalDate? = null,
     onDone: () -> Unit
 ) {
     val context = LocalContext.current
@@ -48,7 +55,8 @@ fun EditContactScreen(
 
     var name by remember { mutableStateOf(contact?.name ?: "") }
     var birthdayInput by remember { 
-        mutableStateOf(contact?.birthday?.format(formatter) ?: "") 
+        val initial = contact?.birthday ?: initialDate
+        mutableStateOf(initial?.format(formatter) ?: "") 
     }
     var photoUri by remember { mutableStateOf(contact?.photoUri) }
     
@@ -133,9 +141,35 @@ fun EditContactScreen(
             }
         }
 
+        if (contact != null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.Source,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "Source: ${contact.source.name} (${contact.accountName ?: "Device"})",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+
         if (isReadOnly) {
             Text(
-                text = "Note: Phone contacts cannot be edited directly in this app.",
+                text = "Note: System contacts cannot be edited directly in this app.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.fillMaxWidth()
