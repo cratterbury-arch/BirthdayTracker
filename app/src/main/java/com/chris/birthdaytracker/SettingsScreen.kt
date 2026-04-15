@@ -1,8 +1,12 @@
 package com.chris.birthdaytracker
 
+import android.Manifest
 import android.accounts.AccountManager
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -24,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.core.content.ContextCompat
 
 
 @Composable
@@ -54,6 +59,24 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
     val disabledPhoneAccounts by SettingsStore
         .disabledPhoneAccounts(context)
         .collectAsState(initial = emptySet())
+
+    var hasCalendarPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CALENDAR
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasCalendarPermission = isGranted
+        if (isGranted) {
+            onDataChanged()
+        }
+    }
 
     val googleAccounts = remember {
         try {
@@ -129,6 +152,28 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         Text("By default, we import birthdays from your phone's address book. You can also sync specific Google Calendars below.", 
             style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         
+        if (!hasCalendarPermission) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Calendar Permission Required", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                        Text("To sync birthdays from Google Calendar, please grant calendar access.", style = MaterialTheme.typography.bodySmall)
+                    }
+                    TextButton(onClick = { permissionLauncher.launch(Manifest.permission.READ_CALENDAR) }) {
+                        Text("Fix")
+                    }
+                }
+            }
+        }
+
         if (googleAccounts.isEmpty()) {
             Text(
                 "No Google accounts found on device.",
@@ -171,10 +216,14 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
                             title = "Google Calendar",
                             checked = calendarEnabled,
                             onToggle = {
-                                scope.launch {
-                                    SettingsStore.toggleCalendarAccount(context, email)
-                                    onDataChanged()
-                                    BirthdayWidgetProvider.refreshAllWidgets(context)
+                                if (!hasCalendarPermission) {
+                                    permissionLauncher.launch(Manifest.permission.READ_CALENDAR)
+                                } else {
+                                    scope.launch {
+                                        SettingsStore.toggleCalendarAccount(context, email)
+                                        onDataChanged()
+                                        BirthdayWidgetProvider.refreshAllWidgets(context)
+                                    }
                                 }
                             }
                         )

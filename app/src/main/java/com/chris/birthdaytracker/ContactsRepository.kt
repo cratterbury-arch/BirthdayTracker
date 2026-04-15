@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
+import java.util.TimeZone
 
 class ContactsRepository(private val context: Context) {
 
@@ -21,38 +22,31 @@ class ContactsRepository(private val context: Context) {
 
     suspend fun getAllContacts(): List<ContactModel> {
         val enabledCalendarAccounts = SettingsStore.enabledCalendarAccounts(context).first()
+            .map { it.lowercase().trim() }.toSet()
         val disabledPhoneAccounts = SettingsStore.disabledPhoneAccounts(context).first()
+            .map { it.lowercase().trim() }.toSet()
         
         // 1. Local App entries (always shown)
         val localContacts = getLocalContacts()
         
         // 2. Phone contacts (shown unless explicitly disabled)
         val phoneContacts = getPhoneContacts().filter { 
-            it.accountName == null || it.accountName !in disabledPhoneAccounts
+            val acc = it.accountName?.lowercase()?.trim()
+            acc == null || acc !in disabledPhoneAccounts
         }
         
         // 3. Calendar birthdays (shown only if explicitly enabled)
         val calendarContacts = getCalendarBirthdays().filter { 
-            it.accountName in enabledCalendarAccounts 
+            val acc = it.accountName?.lowercase()?.trim()
+            acc != null && (
+                acc in enabledCalendarAccounts ||
+                (acc.endsWith("@googlemail.com") && acc.replace("@googlemail.com", "@gmail.com") in enabledCalendarAccounts) ||
+                (acc.endsWith("@gmail.com") && acc.replace("@gmail.com", "@googlemail.com") in enabledCalendarAccounts)
+            )
         }
         
-        // 4. Combine and Deduplicate
-        val allRaw = localContacts + phoneContacts + calendarContacts
-        val uniqueContacts = mutableListOf<ContactModel>()
-        val seenKeys = mutableSetOf<String>()
-
-        for (contact in allRaw) {
-            val birthday = contact.birthday ?: continue
-            val normalizedName = contact.name.lowercase().trim()
-            val key = "${normalizedName}_${birthday.monthValue}_${birthday.dayOfMonth}"
-            
-            if (!seenKeys.contains(key)) {
-                uniqueContacts.add(contact)
-                seenKeys.add(key)
-            }
-        }
-        
-        return uniqueContacts
+        // Return all raw contacts. The UI (BirthdaysScreen) handles deduplication and primary source selection.
+        return localContacts + phoneContacts + calendarContacts
     }
 
     private fun getPhoneContacts(): List<ContactModel> {
@@ -101,17 +95,20 @@ class ContactsRepository(private val context: Context) {
                 val photoUri = it.getString(photoIndex)?.let { Uri.parse(it) }
                 val accountName = it.getString(accountIndex)
 
-                contacts.add(
-                    ContactModel(
-                        id = id,
-                        name = name,
-                        birthday = parseDate(dateString),
-                        photoUri = photoUri,
-                        source = ContactSource.PHONE,
-                        accountName = accountName,
-                        isFromPhone = true
+                val birthday = parseDate(dateString)
+                if (birthday != null) {
+                    contacts.add(
+                        ContactModel(
+                            id = id,
+                            name = name,
+                            birthday = birthday,
+                            photoUri = photoUri,
+                            source = ContactSource.PHONE,
+                            accountName = accountName,
+                            isFromPhone = true
+                        )
                     )
-                )
+                }
             }
         }
         return contacts
@@ -125,22 +122,32 @@ class ContactsRepository(private val context: Context) {
             return emptyList()
         }
 
+        val birthdayCalendarIds = mutableSetOf<Long>()
         val holidayCalendarIds = mutableSetOf<Long>()
+
         val calCursor = try {
             context.contentResolver.query(
                 CalendarContract.Calendars.CONTENT_URI,
-                arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME),
+                arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_DISPLAY_NAME, CalendarContract.Calendars.NAME),
                 null, null, null
             )
         } catch (e: Exception) { null }
 
         calCursor?.use {
             val idIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars._ID)
-            val nameIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val displayNameIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars.CALENDAR_DISPLAY_NAME)
+            val nameIdx = it.getColumnIndexOrThrow(CalendarContract.Calendars.NAME)
             while (it.moveToNext()) {
+                val displayName = it.getString(displayNameIdx) ?: ""
                 val name = it.getString(nameIdx) ?: ""
-                if (name.contains("Holidays", ignoreCase = true)) {
-                    holidayCalendarIds.add(it.getLong(idIdx))
+                val id = it.getLong(idIdx)
+                
+                if (displayName.contains("Holidays", ignoreCase = true)) {
+                    holidayCalendarIds.add(id)
+                } else if (displayName.contains("Birthdays", ignoreCase = true) || 
+                           name.contains("Birthdays", ignoreCase = true) ||
+                           name.lowercase() == "contacts") {
+                    birthdayCalendarIds.add(id)
                 }
             }
         }
@@ -150,15 +157,27 @@ class ContactsRepository(private val context: Context) {
             CalendarContract.Events._ID,
             CalendarContract.Events.TITLE,
             CalendarContract.Events.DTSTART,
-            CalendarContract.Calendars.OWNER_ACCOUNT,
-            CalendarContract.Events.CALENDAR_ID
+            CalendarContract.Calendars.ACCOUNT_NAME,
+            CalendarContract.Events.CALENDAR_ID,
+            CalendarContract.Events.ALL_DAY
         )
 
-        val selection = "${CalendarContract.Events.TITLE} LIKE ?"
-        val selectionArgs = arrayOf("%Birthday%")
+        val selection = StringBuilder()
+        val selectionArgs = mutableListOf<String>()
+
+        if (birthdayCalendarIds.isNotEmpty()) {
+            selection.append("${CalendarContract.Events.CALENDAR_ID} IN (${birthdayCalendarIds.joinToString(",")})")
+        }
+
+        val titlePatterns = listOf("%Birthday%", "%B-day%", "%Anniversaire%", "%Geburtstag%")
+        for (pattern in titlePatterns) {
+            if (selection.isNotEmpty()) selection.append(" OR ")
+            selection.append("${CalendarContract.Events.TITLE} LIKE ?")
+            selectionArgs.add(pattern)
+        }
 
         val cursor = try {
-            context.contentResolver.query(uri, projection, selection, selectionArgs, null)
+            context.contentResolver.query(uri, projection, selection.toString(), selectionArgs.toTypedArray(), null)
         } catch (e: Exception) {
             null
         }
@@ -167,8 +186,9 @@ class ContactsRepository(private val context: Context) {
             val idIndex = it.getColumnIndexOrThrow(CalendarContract.Events._ID)
             val titleIndex = it.getColumnIndexOrThrow(CalendarContract.Events.TITLE)
             val dateIndex = it.getColumnIndexOrThrow(CalendarContract.Events.DTSTART)
-            val ownerIndex = it.getColumnIndexOrThrow(CalendarContract.Calendars.OWNER_ACCOUNT)
+            val accountIndex = it.getColumnIndexOrThrow(CalendarContract.Calendars.ACCOUNT_NAME)
             val calIdIndex = it.getColumnIndexOrThrow(CalendarContract.Events.CALENDAR_ID)
+            val allDayIndex = it.getColumnIndexOrThrow(CalendarContract.Events.ALL_DAY)
 
             while (it.moveToNext()) {
                 val calId = it.getLong(calIdIndex)
@@ -184,12 +204,23 @@ class ContactsRepository(private val context: Context) {
 
                 val id = "cal_" + it.getLong(idIndex).toString()
                 val dtStart = it.getLong(dateIndex)
-                val accountName = it.getString(ownerIndex)
+                val accountName = it.getString(accountIndex)
+                val allDay = it.getInt(allDayIndex) == 1
                 
-                val extractedName = title.replace("'s Birthday", "", ignoreCase = true).replace("Birthday", "", ignoreCase = true).trim()
+                val extractedName = title.replace("'s Birthday", "", ignoreCase = true)
+                    .replace("Birthday", "", ignoreCase = true)
+                    .replace("B-day", "", ignoreCase = true)
+                    .replace("Geburtstag", "", ignoreCase = true)
+                    .replace("Anniversaire", "", ignoreCase = true)
+                    .trim()
+
                 if (extractedName.isEmpty() || extractedName.lowercase() == "my") continue
 
-                val calendar = Calendar.getInstance()
+                val calendar = if (allDay) {
+                    Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                } else {
+                    Calendar.getInstance()
+                }
                 calendar.timeInMillis = dtStart
                 val birthday = LocalDate.of(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.DAY_OF_MONTH))
 

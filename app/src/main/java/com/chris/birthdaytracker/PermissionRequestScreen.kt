@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun PermissionRequestScreen(
-    onRequest: () -> Unit
+    onRequest: () -> Unit,
+    onSkip: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -100,6 +101,19 @@ fun PermissionRequestScreen(
                 shape = MaterialTheme.shapes.medium
             ) {
                 Text("Get Started", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            TextButton(
+                onClick = onSkip,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Continue without permissions",
+                    color = Color.LightGray,
+                    fontSize = 14.sp
+                )
             }
             
             Spacer(modifier = Modifier.height(24.dp))

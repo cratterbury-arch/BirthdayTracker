@@ -34,6 +34,8 @@ fun AppRoot() {
         )
     }
 
+    var didSkipPermissions by remember { mutableStateOf(false) }
+
     var contacts by remember { mutableStateOf<List<ContactModel>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
 
@@ -69,7 +71,7 @@ fun AppRoot() {
         }
 
         // Request initial permissions
-        if (!hasContactsPermission || !hasCalendarPermission) {
+        if (!hasContactsPermission && !hasCalendarPermission) {
             permissionsLauncher.launch(
                 arrayOf(
                     Manifest.permission.READ_CONTACTS,
@@ -79,9 +81,9 @@ fun AppRoot() {
         }
     }
 
-    // Load contacts once permission is granted
-    LaunchedEffect(hasContactsPermission, hasCalendarPermission) {
-        if (hasContactsPermission || hasCalendarPermission) {
+    // Load contacts once permission is granted OR user skips
+    LaunchedEffect(hasContactsPermission, hasCalendarPermission, didSkipPermissions) {
+        if (hasContactsPermission || hasCalendarPermission || didSkipPermissions) {
             val loadedContacts = ContactsRepository(context).getAllContacts()
             contacts = loadedContacts
 
@@ -102,15 +104,20 @@ fun AppRoot() {
         }
     }
 
-    if (!hasContactsPermission && !hasCalendarPermission) {
-        PermissionRequestScreen {
-            permissionsLauncher.launch(
-                arrayOf(
-                    Manifest.permission.READ_CONTACTS,
-                    Manifest.permission.READ_CALENDAR
+    if (!hasContactsPermission && !hasCalendarPermission && !didSkipPermissions) {
+        PermissionRequestScreen(
+            onRequest = {
+                permissionsLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.READ_CONTACTS,
+                        Manifest.permission.READ_CALENDAR
+                    )
                 )
-            )
-        }
+            },
+            onSkip = {
+                didSkipPermissions = true
+            }
+        )
     } else {
         AppScaffold(
             contacts = contacts,
