@@ -69,7 +69,16 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    var hasContactsPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.READ_CONTACTS
+            ) == PackageManager.PERMISSION_GRANTED
+        )
+    }
+
+    val calendarPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         hasCalendarPermission = isGranted
@@ -78,7 +87,16 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         }
     }
 
-    val googleAccounts = remember {
+    val contactsPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasContactsPermission = isGranted
+        if (isGranted) {
+            onDataChanged()
+        }
+    }
+
+    val googleAccounts = remember(hasContactsPermission, hasCalendarPermission) {
         try {
             AccountManager.get(context).getAccountsByType("com.google").map { it.name }
         } catch (e: Exception) {
@@ -152,33 +170,28 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         Text("By default, we import birthdays from your phone's address book. You can also sync specific Google Calendars below.", 
             style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         
+        if (!hasContactsPermission) {
+            PermissionWarningCard(
+                title = "Contacts Permission Required",
+                description = "To show birthdays from your phone's address book, please grant contacts access.",
+                onFix = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }
+            )
+        }
+
         if (!hasCalendarPermission) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Calendar Permission Required", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                        Text("To sync birthdays from Google Calendar, please grant calendar access.", style = MaterialTheme.typography.bodySmall)
-                    }
-                    TextButton(onClick = { permissionLauncher.launch(Manifest.permission.READ_CALENDAR) }) {
-                        Text("Fix")
-                    }
-                }
-            }
+            PermissionWarningCard(
+                title = "Calendar Permission Required",
+                description = "To sync birthdays from Google Calendar, please grant calendar access.",
+                onFix = { calendarPermissionLauncher.launch(Manifest.permission.READ_CALENDAR) }
+            )
         }
 
         if (googleAccounts.isEmpty()) {
             Text(
-                "No Google accounts found on device.",
+                if (!hasContactsPermission) "Grant contacts permission to see Google accounts." else "No Google accounts found on device.",
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
+                color = Color.Gray,
+                modifier = Modifier.padding(vertical = 8.dp)
             )
         } else {
             googleAccounts.forEach { email ->
@@ -203,10 +216,14 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
                             title = "Phone Contacts",
                             checked = !phoneDisabled,
                             onToggle = {
-                                scope.launch {
-                                    SettingsStore.togglePhoneAccount(context, email)
-                                    onDataChanged()
-                                    BirthdayWidgetProvider.refreshAllWidgets(context)
+                                if (!hasContactsPermission) {
+                                    contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+                                } else {
+                                    scope.launch {
+                                        SettingsStore.togglePhoneAccount(context, email)
+                                        onDataChanged()
+                                        BirthdayWidgetProvider.refreshAllWidgets(context)
+                                    }
                                 }
                             }
                         )
@@ -217,7 +234,7 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
                             checked = calendarEnabled,
                             onToggle = {
                                 if (!hasCalendarPermission) {
-                                    permissionLauncher.launch(Manifest.permission.READ_CALENDAR)
+                                    calendarPermissionLauncher.launch(Manifest.permission.READ_CALENDAR)
                                 } else {
                                     scope.launch {
                                         SettingsStore.toggleCalendarAccount(context, email)
@@ -307,6 +324,34 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Composable
+private fun PermissionWarningCard(
+    title: String,
+    description: String,
+    onFix: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.2f))
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(description, style = MaterialTheme.typography.bodySmall)
+            }
+            TextButton(onClick = onFix) {
+                Text("Fix")
+            }
+        }
     }
 }
 
