@@ -1,33 +1,56 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Privacy Policy - Birthday Tracker</title>
     <style>
-        body { font-family: sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; }
-        h1 { color: #6200EE; }
-        h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; padding: 20px; max-width: 800px; margin: 0 auto; color: #333; }
+        h1 { color: #6200EE; border-bottom: 2px solid #6200EE; padding-bottom: 10px; }
+        h2 { color: #3700B3; margin-top: 30px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .last-updated { color: #666; font-style: italic; margin-bottom: 30px; }
+        .highlight { background-color: #f8f9fa; padding: 15px; border-left: 5px solid #6200EE; border-radius: 4px; margin: 20px 0; }
     </style>
 </head>
 <body>
     <h1>Privacy Policy</h1>
-    <p>Last updated: October 2023</p>
+    <p class="last-updated">Last updated: May 2024</p>
+
+    <div class="highlight">
+        <strong>Executive Summary:</strong> Birthday Tracker is a privacy-first application. All your data stays on your device. We do not use servers, we do not track you, and we never share your data with anyone.
+    </div>
 
     <h2>Overview</h2>
-    <p>This Privacy Policy describes how <strong>Birthday Tracker</strong> handles your information. We take your privacy seriously and do not collect or share any personal data on our servers.</p>
+    <p>This Privacy Policy describes how <strong>Birthday Tracker</strong> handles your information. Our primary goal is to help you remember important dates while ensuring your personal information never leaves your device.</p>
 
-    <h2>Information Collection and Use</h2>
-    <p><strong>Contacts Data:</strong> Our app requests the <code>READ_CONTACTS</code> permission. This is used solely to allow you to import your friends' and family's birthdays directly into the app.</p>
-    <p><strong>Calendar Data:</strong> Our app requests the <code>READ_CALENDAR</code> permission. This is used to display birthdays and anniversaries that you have saved in your Google Calendar or other calendar accounts on your device.</p>
-    <p><strong>Data Privacy:</strong> All contact and calendar data remains on your device and is never uploaded to any external server.</p>
-    <p><strong>Local Storage:</strong> Birthdays you enter manually or import are stored locally on your device in a secure database. This data is not shared with third parties.</p>
-    <p><strong>Notifications:</strong> The app uses local alarms to send birthday reminders. No tracking or analytics are used for these notifications.</p>
+    <h2>Data We Access (Permissions)</h2>
+    <p>To provide its core functionality, Birthday Tracker requests the following permissions:</p>
 
-    <h2>Changes to This Policy</h2>
-    <p>We may update our Privacy Policy from time to time. You are advised to review this page periodically for any changes.</p>
+    <ul>
+        <li><strong>Contacts (READ_CONTACTS):</strong> Used to automatically find and display birthdays already stored in your phone's address book.</li>
+        <li><strong>Calendar (READ_CALENDAR):</strong> Used to sync and display birthdays from your Google Calendar or other linked accounts.</li>
+        <li><strong>Notifications (POST_NOTIFICATIONS):</strong> Used to send you timely reminders so you never miss a birthday.</li>
+    </ul>
+
+    <h2>How We Handle Your Data</h2>
+    <p><strong>Local Processing:</strong> All data retrieved from your contacts or calendar is processed locally on your device. We do not "collect" this data in a traditional sense, as it is never transmitted to us or any third party.</p>
+
+    <p><strong>Local Storage:</strong> Birthdays you enter manually or choose to import are stored in a secure local database on your own device. This data is used only to display your birthday list and trigger notifications.</p>
+
+    <p><strong>No Third-Party Sharing:</strong> We do not sell, trade, or otherwise transfer your information to outside parties. There are no analytics, tracking pixels, or advertising SDKs included in the app.</p>
+
+    <h2>Data Retention and Deletion</h2>
+    <p>As all data is stored locally on your device, you have full control over it:</p>
+    <ul>
+        <li>You can delete individual birthdays within the app at any time.</li>
+        <li>You can remove all app data by going to <strong>Android Settings > Apps > Birthday Tracker > Storage > Clear Data</strong>.</li>
+        <li>Uninstalling the app will automatically remove all locally stored birthday data.</li>
+    </ul>
+
+    <h2>Compliance with Google Play Policies</h2>
+    <p>This app complies with the latest Google Play Developer Program Policies, including the requirements for data minimization and secure data handling. We only request permissions necessary for the app's stated core features.</p>
 
     <h2>Contact Us</h2>
-    <p>If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at <a href="mailto:cratterbury@gmail.com">cratterbury@gmail.com</a>.</p>
+    <p>If you have any questions or suggestions about our Privacy Policy, please contact us at <a href="mailto:cratterbury@gmail.com">cratterbury@gmail.com</a>.</p>
 </body>
 </html>
