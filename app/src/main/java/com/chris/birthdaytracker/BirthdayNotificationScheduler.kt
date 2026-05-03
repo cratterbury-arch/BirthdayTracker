@@ -18,31 +18,44 @@ object BirthdayNotificationScheduler {
         val enabled = SettingsStore.notificationsEnabled(context).first()
         if (!enabled) return
 
+        val notificationDays = SettingsStore.notificationDays(context).first()
+        val notificationTimeStr = SettingsStore.notificationTime(context).first()
+        val favoritesOnly = SettingsStore.favoritesOnlyNotifications(context).first()
+
+        val timeParts = notificationTimeStr.split(":")
+        val notificationTime = LocalTime.of(timeParts[0].toInt(), timeParts[1].toInt())
+
         val alarmManager =
             context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         contacts.forEach { contact ->
+            if (favoritesOnly && !contact.isFavorite) return@forEach
+
             val birthday = contact.birthday ?: return@forEach
             val today = LocalDate.now()
 
             val next = birthday.withYear(today.year)
                 .let { if (it.isBefore(today)) it.plusYears(1) else it }
 
-            // 🎂 ON THE DAY
-            scheduleNotification(
-                context,
-                alarmManager,
-                next,
-                "It's ${contact.name}'s ${next.year - birthday.year} birthday today! 🎉"
-            )
+            notificationDays.forEach { dayOffset ->
+                val offset = dayOffset.toLong()
+                val scheduleDate = next.minusDays(offset)
+                
+                val message = when(offset) {
+                    0L -> "It's ${contact.name}'s birthday today! 🎉"
+                    1L -> "Reminder: ${contact.name}'s birthday is tomorrow! 🎂"
+                    else -> "Reminder: ${contact.name}'s birthday is in $offset days 🎂"
+                }
 
-            // ⏰ ONE WEEK BEFORE
-            scheduleNotification(
-                context,
-                alarmManager,
-                next.minusWeeks(1),
-                "Reminder: ${contact.name}'s birthday is next week 🎂"
-            )
+                scheduleNotification(
+                    context,
+                    alarmManager,
+                    scheduleDate,
+                    notificationTime,
+                    message,
+                    "${contact.id}_$dayOffset"
+                )
+            }
         }
     }
 
@@ -50,27 +63,18 @@ object BirthdayNotificationScheduler {
         context: Context,
         alarmManager: AlarmManager,
         date: LocalDate,
-        message: String
+        time: LocalTime,
+        message: String,
+        uniqueId: String
     ) {
         val intent = Intent(context, BirthdayNotificationReceiver::class.java).apply {
             putExtra("title", "Birthday Tracker")
             putExtra("text", message)
         }
-        val requestCode = message.hashCode()
-
-        val pendingIntentExists = PendingIntent.getBroadcast(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        ) != null
-
-        if (pendingIntentExists) {
-            return // Already scheduled
-        }
+        val requestCode = uniqueId.hashCode()
 
         val triggerTime = date
-            .atTime(LocalTime.of(9, 0)) // Set for 9:00 AM
+            .atTime(time)
             .atZone(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
@@ -112,7 +116,6 @@ object BirthdayNotificationScheduler {
 
         val triggerAt = System.currentTimeMillis() + 5_000 // 5 seconds
 
-        // Use a standard, inexact alarm to avoid the crash.
         alarmManager.set(
             AlarmManager.RTC_WAKEUP,
             triggerAt,

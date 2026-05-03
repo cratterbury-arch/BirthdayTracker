@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Cake
@@ -26,7 +27,7 @@ fun AppScaffold(
 ) {
     val pagerState = rememberPagerState(
         initialPage = 0,
-        pageCount = { 3 }
+        pageCount = { 4 }
     )
 
     val scope = rememberCoroutineScope()
@@ -51,8 +52,8 @@ fun AppScaffold(
                     onClick = {
                         scope.launch { pagerState.animateScrollToPage(1) }
                     },
-                    icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
-                    label = { Text("Calendar") }
+                    icon = { Icon(Icons.AutoMirrored.Filled.EventNote, contentDescription = null) },
+                    label = { Text("Events") }
                 )
 
                 NavigationBarItem(
@@ -60,13 +61,22 @@ fun AppScaffold(
                     onClick = {
                         scope.launch { pagerState.animateScrollToPage(2) }
                     },
+                    icon = { Icon(Icons.Default.CalendarMonth, contentDescription = null) },
+                    label = { Text("Calendar") }
+                )
+
+                NavigationBarItem(
+                    selected = pagerState.currentPage == 3,
+                    onClick = {
+                        scope.launch { pagerState.animateScrollToPage(3) }
+                    },
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text("Settings") }
                 )
             }
         },
         floatingActionButton = {
-            if (pagerState.currentPage == 0 || pagerState.currentPage == 1) {
+            if (pagerState.currentPage == 0 || pagerState.currentPage == 2) {
                 FloatingActionButton(
                     onClick = { 
                         preselectedDate = null
@@ -91,7 +101,8 @@ fun AppScaffold(
                     onRefresh = onRefresh,
                     isRefreshing = isRefreshing
                 )
-                1 -> CalendarScreen(
+                1 -> EventsScreen()
+                2 -> CalendarScreen(
                     contacts = contacts,
                     selectedContact = selectedContact,
                     onContactSelected = { contact ->
@@ -103,7 +114,7 @@ fun AppScaffold(
                     },
                     onPopupDismissed = { selectedContact = null }
                 )
-                2 -> SettingsScreen(onDataChanged = onRefresh)
+                3 -> SettingsScreen(onDataChanged = onRefresh)
             }
         }
 

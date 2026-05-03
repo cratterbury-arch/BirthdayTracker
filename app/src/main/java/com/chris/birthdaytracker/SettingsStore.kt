@@ -19,6 +19,16 @@ object SettingsStore {
     val IS_FIRST_RUN = booleanPreferencesKey("is_first_run")
     val PREFERRED_SOURCES = stringSetPreferencesKey("preferred_sources") // Format: "duplicateKey|preferredContactId"
 
+    val NOTIFICATION_DAYS = stringSetPreferencesKey("notification_days") // "0", "1", "2" etc.
+    val NOTIFICATION_TIME = stringPreferencesKey("notification_time") // "09:30"
+    val FAVORITES_ONLY_NOTIFICATIONS = booleanPreferencesKey("favorites_only_notifications")
+    val NOTIFICATION_SOUND_URI = stringPreferencesKey("notification_sound_uri")
+    val SORT_BY_SURNAME = booleanPreferencesKey("sort_by_surname")
+
+    val SHOW_ZODIAC = booleanPreferencesKey("show_zodiac")
+    val SHOW_CHINESE_YEAR = booleanPreferencesKey("show_chinese_year")
+    val GOOGLE_SYNC_ENABLED = booleanPreferencesKey("google_sync_enabled")
+
     fun soundEnabled(context: Context): Flow<Boolean> =
         context.dataStore.data.map { it[SOUND] ?: true }
 
@@ -48,6 +58,30 @@ object SettingsStore {
                 if (parts.size == 2) parts[0] to parts[1] else null
             }.toMap()
         }
+
+    fun notificationDays(context: Context): Flow<Set<String>> =
+        context.dataStore.data.map { it[NOTIFICATION_DAYS] ?: setOf("0") }
+
+    fun notificationTime(context: Context): Flow<String> =
+        context.dataStore.data.map { it[NOTIFICATION_TIME] ?: "09:00" }
+
+    fun favoritesOnlyNotifications(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { it[FAVORITES_ONLY_NOTIFICATIONS] ?: false }
+
+    fun notificationSoundUri(context: Context): Flow<String?> =
+        context.dataStore.data.map { it[NOTIFICATION_SOUND_URI] }
+
+    fun sortBySurname(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { it[SORT_BY_SURNAME] ?: false }
+
+    fun showZodiac(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { it[SHOW_ZODIAC] ?: false }
+
+    fun showChineseYear(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { it[SHOW_CHINESE_YEAR] ?: false }
+
+    fun googleSyncEnabled(context: Context): Flow<Boolean> =
+        context.dataStore.data.map { it[GOOGLE_SYNC_ENABLED] ?: false }
 
     suspend fun setSound(context: Context, enabled: Boolean) {
         context.dataStore.edit { it[SOUND] = enabled }
@@ -98,5 +132,40 @@ object SettingsStore {
                 prefs[DISABLED_PHONE_ACCOUNTS] = current + accountName
             }
         }
+    }
+
+    suspend fun setNotificationDays(context: Context, days: Set<String>) {
+        context.dataStore.edit { it[NOTIFICATION_DAYS] = days }
+    }
+
+    suspend fun setNotificationTime(context: Context, time: String) {
+        context.dataStore.edit { it[NOTIFICATION_TIME] = time }
+    }
+
+    suspend fun setFavoritesOnlyNotifications(context: Context, enabled: Boolean) {
+        context.dataStore.edit { it[FAVORITES_ONLY_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun setNotificationSoundUri(context: Context, uri: String?) {
+        context.dataStore.edit {
+            if (uri == null) it.remove(NOTIFICATION_SOUND_URI)
+            else it[NOTIFICATION_SOUND_URI] = uri
+        }
+    }
+
+    suspend fun setSortBySurname(context: Context, enabled: Boolean) {
+        context.dataStore.edit { it[SORT_BY_SURNAME] = enabled }
+    }
+
+    suspend fun setShowZodiac(context: Context, enabled: Boolean) {
+        context.dataStore.edit { it[SHOW_ZODIAC] = enabled }
+    }
+
+    suspend fun setShowChineseYear(context: Context, enabled: Boolean) {
+        context.dataStore.edit { it[SHOW_CHINESE_YEAR] = enabled }
+    }
+
+    suspend fun setGoogleSyncEnabled(context: Context, enabled: Boolean) {
+        context.dataStore.edit { it[GOOGLE_SYNC_ENABLED] = enabled }
     }
 }

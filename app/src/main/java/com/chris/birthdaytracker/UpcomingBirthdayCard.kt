@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,7 +33,8 @@ import java.time.temporal.ChronoUnit
 
 @Composable
 fun UpcomingBirthdayCard(
-    contact: ContactModel
+    contact: ContactModel,
+    onToggleFavorite: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val today = LocalDate.now()
@@ -41,6 +44,9 @@ fun UpcomingBirthdayCard(
     val daysToGo = ChronoUnit.DAYS.between(today, nextBirthday).toInt()
     val isToday = daysToGo == 0
     val ageOnNext = nextBirthday.year - birthday.year
+
+    val showZodiac by SettingsStore.showZodiac(context).collectAsState(initial = false)
+    val showChineseYear by SettingsStore.showChineseYear(context).collectAsState(initial = false)
 
     val cardModifier = if (isToday) {
         Modifier
@@ -93,20 +99,48 @@ fun UpcomingBirthdayCard(
                 ) {
 
                     // Name
-                    Text(
-                        text = contact.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = contact.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            onClick = { onToggleFavorite(!contact.isFavorite) },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (contact.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "Favorite",
+                                tint = if (contact.isFavorite) Color.Red else LocalContentColor.current,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
 
                     // AGE – visual focus
-                    Text(
-                        text = "Turning $ageOnNext 🎂",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        textAlign = TextAlign.Start
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Turning $ageOnNext 🎂",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            textAlign = TextAlign.Start
+                        )
+                        
+                        if (showZodiac || showChineseYear) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = buildString {
+                                    if (showZodiac) append(getZodiacSign(birthday))
+                                    if (showZodiac && showChineseYear) append(" ")
+                                    if (showChineseYear) append(getChineseZodiac(birthday))
+                                },
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
 
                     // DOB info
                     Text(

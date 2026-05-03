@@ -26,16 +26,18 @@ class ContactsRepository(private val context: Context) {
         val disabledPhoneAccounts = SettingsStore.disabledPhoneAccounts(context).first()
             .map { it.lowercase().trim() }.toSet()
         
-        // 1. Local App entries (always shown)
+        val metadataMap = getMetadataMap()
+        
+        // 1. Local App entries
         val localContacts = getLocalContacts()
         
-        // 2. Phone contacts (shown unless explicitly disabled)
+        // 2. Phone contacts
         val phoneContacts = getPhoneContacts().filter { 
             val acc = it.accountName?.lowercase()?.trim()
             acc == null || acc !in disabledPhoneAccounts
-        }
+        }.map { mergeMetadata(it, metadataMap) }
         
-        // 3. Calendar birthdays (shown only if explicitly enabled)
+        // 3. Calendar birthdays
         val calendarContacts = getCalendarBirthdays().filter { 
             val acc = it.accountName?.lowercase()?.trim()
             acc != null && (
@@ -43,10 +45,23 @@ class ContactsRepository(private val context: Context) {
                 (acc.endsWith("@googlemail.com") && acc.replace("@googlemail.com", "@gmail.com") in enabledCalendarAccounts) ||
                 (acc.endsWith("@gmail.com") && acc.replace("@gmail.com", "@googlemail.com") in enabledCalendarAccounts)
             )
-        }
+        }.map { mergeMetadata(it, metadataMap) }
         
-        // Return all raw contacts. The UI (BirthdaysScreen) handles deduplication and primary source selection.
         return localContacts + phoneContacts + calendarContacts
+    }
+
+    private fun mergeMetadata(contact: ContactModel, metadataMap: Map<String, ContactMetadataEntity>): ContactModel {
+        val key = "${contact.name.lowercase().trim()}_${contact.birthday?.monthValue}_${contact.birthday?.dayOfMonth}"
+        val metadata = metadataMap[key] ?: return contact
+        return contact.copy(
+            isFavorite = metadata.isFavorite,
+            tags = if (metadata.tags.isBlank()) emptyList() else metadata.tags.split(",")
+        )
+    }
+
+    private suspend fun getMetadataMap(): Map<String, ContactMetadataEntity> {
+        val db = BirthdayApplication.getDatabase(context)
+        return db.metadataDao().getAllMetadata().associateBy { it.contactKey }
     }
 
     private fun getPhoneContacts(): List<ContactModel> {
@@ -105,7 +120,9 @@ class ContactsRepository(private val context: Context) {
                             photoUri = photoUri,
                             source = ContactSource.PHONE,
                             accountName = accountName,
-                            isFromPhone = true
+                            isFromPhone = true,
+                            isFavorite = false,
+                            tags = emptyList()
                         )
                     )
                 }
@@ -232,7 +249,9 @@ class ContactsRepository(private val context: Context) {
                         photoUri = null,
                         source = ContactSource.CALENDAR,
                         accountName = accountName,
-                        isFromPhone = true
+                        isFromPhone = true,
+                        isFavorite = false,
+                        tags = emptyList()
                     )
                 )
             }
@@ -264,8 +283,25 @@ class ContactsRepository(private val context: Context) {
                 photoUri = entity.photoUri?.let { Uri.parse(it) },
                 source = ContactSource.LOCAL,
                 accountName = "Local App",
-                isFromPhone = false
+                isFromPhone = false,
+                isFavorite = entity.isFavorite,
+                tags = if (entity.tags.isBlank()) emptyList() else entity.tags.split(",")
             )
+        }
+    }
+
+    suspend fun updateFavorite(contact: ContactModel, isFavorite: Boolean) {
+        val db = BirthdayApplication.getDatabase(context)
+        if (contact.source == ContactSource.LOCAL) {
+            db.contactDao().updateFavorite(contact.id, isFavorite)
+        } else {
+            val key = "${contact.name.lowercase().trim()}_${contact.birthday?.monthValue}_${contact.birthday?.dayOfMonth}"
+            val existing = db.metadataDao().getMetadata(key)
+            db.metadataDao().insert(ContactMetadataEntity(
+                contactKey = key,
+                tags = existing?.tags ?: "",
+                isFavorite = isFavorite
+            ))
         }
     }
 }

@@ -2,11 +2,14 @@ package com.chris.birthdaytracker
 
 import android.Manifest
 import android.accounts.AccountManager
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.RingtoneManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -60,6 +63,26 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         .disabledPhoneAccounts(context)
         .collectAsState(initial = emptySet())
 
+    val notificationDays by SettingsStore
+        .notificationDays(context)
+        .collectAsState(initial = setOf("0"))
+
+    val notificationTime by SettingsStore
+        .notificationTime(context)
+        .collectAsState(initial = "09:00")
+
+    val favoritesOnlyNotifications by SettingsStore
+        .favoritesOnlyNotifications(context)
+        .collectAsState(initial = false)
+
+    val notificationSoundUri by SettingsStore
+        .notificationSoundUri(context)
+        .collectAsState(initial = null)
+
+    val sortBySurname by SettingsStore
+        .sortBySurname(context)
+        .collectAsState(initial = false)
+
     var hasCalendarPermission by remember {
         mutableStateOf(
             ContextCompat.checkSelfPermission(
@@ -93,6 +116,17 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
         hasContactsPermission = isGranted
         if (isGranted) {
             onDataChanged()
+        }
+    }
+
+    val soundPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val uri = result.data?.getParcelableExtra<Uri>(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            scope.launch {
+                SettingsStore.setNotificationSoundUri(context, uri?.toString())
+            }
         }
     }
 
@@ -130,7 +164,7 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
 
         IconSwitchRow(
             icon = Icons.Default.VolumeUp,
-            title = "Sound",
+            title = "App Sound Effects",
             checked = soundEnabled,
             onToggle = {
                 scope.launch {
@@ -146,6 +180,18 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
             onToggle = {
                 scope.launch {
                     SettingsStore.setConfetti(context, !confettiEnabled)
+                }
+            }
+        )
+
+        IconSwitchRow(
+            icon = Icons.Default.SortByAlpha,
+            title = "Sort by Surname First",
+            checked = sortBySurname,
+            onToggle = {
+                scope.launch {
+                    SettingsStore.setSortBySurname(context, !sortBySurname)
+                    onDataChanged()
                 }
             }
         )
@@ -255,7 +301,7 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
 
         IconSwitchRow(
             icon = Icons.Default.Notifications,
-            title = "Birthday notifications",
+            title = "Enable Notifications",
             checked = notificationsEnabled,
             onToggle = {
                 scope.launch {
@@ -263,6 +309,87 @@ fun SettingsScreen(onDataChanged: () -> Unit = {}) {
                 }
             }
         )
+
+        if (notificationsEnabled) {
+            Column(modifier = Modifier.padding(start = 32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                
+                Text("When should I notify you?", style = MaterialTheme.typography.bodyMedium)
+                
+                val dayOptions = listOf(
+                    "0" to "On same day",
+                    "1" to "One day before",
+                    "2" to "Two days before",
+                    "7" to "One week before"
+                )
+
+                dayOptions.forEach { (days, label) ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val newDays = if (days in notificationDays) notificationDays - days else notificationDays + days
+                            scope.launch { SettingsStore.setNotificationDays(context, newDays) }
+                        }
+                    ) {
+                        Checkbox(
+                            checked = days in notificationDays,
+                            onCheckedChange = { checked ->
+                                val newDays = if (checked) notificationDays + days else notificationDays - days
+                                scope.launch { SettingsStore.setNotificationDays(context, newDays) }
+                            }
+                        )
+                        Text(label, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        val timeParts = notificationTime.split(":")
+                        TimePickerDialog(context, { _, h, m ->
+                            scope.launch { SettingsStore.setNotificationTime(context, String.format("%02d:%02d", h, m)) }
+                        }, timeParts[0].toInt(), timeParts[1].toInt(), true).show()
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Notification time", style = MaterialTheme.typography.bodySmall)
+                    Text(notificationTime, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                }
+
+                IconSwitchRow(
+                    icon = Icons.Default.Favorite,
+                    title = "Favorites Only",
+                    checked = favoritesOnlyNotifications,
+                    onToggle = {
+                        scope.launch {
+                            SettingsStore.setFavoritesOnlyNotifications(context, !favoritesOnlyNotifications)
+                        }
+                    }
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_NOTIFICATION)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_TITLE, "Select Notification Sound")
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, notificationSoundUri?.let { Uri.parse(it) })
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                            putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, true)
+                        }
+                        soundPickerLauncher.launch(intent)
+                    },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("Notification Sound", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        if (notificationSoundUri == null) "Default" else "Custom",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
 
         Button(
             onClick = {

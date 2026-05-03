@@ -1,9 +1,9 @@
 
 [versions]
-agp = "8.4.1"
-kotlin = "1.9.22"
-ksp = "1.9.22-1.0.17"
-composePlugin = "1.5.10"
+agp = "9.2.0"
+kotlin = "2.3.21"
+ksp = "2.3.7"
+composePlugin = "2.3.21"
 coreKtx = "1.10.1"
 junit = "4.13.2"
 junitVersion = "1.1.5"
@@ -33,3 +33,4 @@ android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "composePlugin" }
+kotlin-parcelize = { id = "org.jetbrains.kotlin.plugin.parcelize", version.ref = "kotlin" }

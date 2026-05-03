@@ -10,5 +10,7 @@ data class LocalContactEntity(
     val name: String,
     val birthday: LocalDate,
     val isFromPhone: Boolean = false,
-    val photoUri: String? = null
+    val photoUri: String? = null,
+    val isFavorite: Boolean = false,
+    val tags: String = "" // Stored as comma-separated string
 )

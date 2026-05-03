@@ -1,6 +1,7 @@
 // Top-level build file
 plugins {
-    id("com.android.application") apply false
-    id("org.jetbrains.kotlin.android") apply false
-    id("com.google.devtools.ksp") apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.kotlin.parcelize) apply false
+    id("com.google.android.libraries.mapsplatform.secrets-gradle-plugin") version "2.0.1" apply false
 }

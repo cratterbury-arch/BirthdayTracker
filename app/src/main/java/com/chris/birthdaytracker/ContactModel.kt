@@ -17,5 +17,7 @@ data class ContactModel(
     val photoUri: Uri?,
     val source: ContactSource = ContactSource.LOCAL,
     val accountName: String? = null,
-    val isFromPhone: Boolean = false
+    val isFromPhone: Boolean = false,
+    val isFavorite: Boolean = false,
+    val tags: List<String> = emptyList()
 ) : Parcelable
