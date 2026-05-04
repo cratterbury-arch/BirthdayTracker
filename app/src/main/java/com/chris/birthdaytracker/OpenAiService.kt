@@ -11,12 +11,17 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.concurrent.TimeUnit
 
 class OpenAiService(
     private val apiKey: String
 ) : AiService {
 
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build()
 
     override suspend fun generateCard(
         name: String,
@@ -24,17 +29,34 @@ class OpenAiService(
         style: String
     ): AiResult = withContext(Dispatchers.IO) {
 
-        val prompt = """
-            Create a birthday card for $name.
-            The person likes: $interests.
-            The art style should be: $style.
+        if (apiKey.isBlank()) {
+            throw Exception("OPENAI_API_KEY is missing. Add it to gradle.properties.")
+        }
 
-            Return ONLY a JSON object with two fields:
-            1. "message": a short, warm, and creative birthday message (not starting with "Happy Birthday").
-            2. "imagePrompt": a detailed prompt for an image generator (like DALL-E) to create a vibrant, beautiful birthday illustration incorporating their interests and the requested style.
+        val safeInterests = interests.ifBlank { "birthday cake, balloons, colourful celebration" }
+
+        val prompt = """
+            Create a birthday card concept for $name.
+
+            Interests: $safeInterests
+            Art style: $style
+
+            Return ONLY valid JSON in this exact format:
+            {
+              "message": "short warm birthday message",
+              "imagePrompt": "detailed image prompt"
+            }
+
+            The message must not start with "Happy Birthday".
+            The image prompt must describe a birthday card illustration.
+            Do not ask for text, letters, names, or readable writing inside the image.
         """.trimIndent()
 
         val messages = JSONArray().apply {
+            put(JSONObject().apply {
+                put("role", "system")
+                put("content", "You create JSON only. No markdown. No extra text.")
+            })
             put(JSONObject().apply {
                 put("role", "user")
                 put("content", prompt)
@@ -44,7 +66,10 @@ class OpenAiService(
         val json = JSONObject().apply {
             put("model", "gpt-4o-mini")
             put("messages", messages)
-            put("response_format", JSONObject().apply { put("type", "json_object") })
+            put("temperature", 0.9)
+            put("response_format", JSONObject().apply {
+                put("type", "json_object")
+            })
         }
 
         val request = Request.Builder()
@@ -54,39 +79,56 @@ class OpenAiService(
             .post(json.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        val response = try {
-            client.newCall(request).execute()
-        } catch (e: Exception) {
-            throw Exception("Network error: ${e.message}")
-        }
-
+        val response = client.newCall(request).execute()
         val body = response.body?.string().orEmpty()
-        Log.d("OpenAI", "Response: $body")
+
+        Log.d("OpenAI", "HTTP ${response.code}")
+        Log.d("OpenAI", body)
 
         if (!response.isSuccessful) {
             throw Exception("OpenAI error ${response.code}: $body")
         }
 
         val responseJson = JSONObject(body)
-        val choices = responseJson.optJSONArray("choices") ?: throw Exception("Invalid response: No choices")
-        val content = choices.getJSONObject(0).getJSONObject("message").getString("content")
+        val content = responseJson
+            .getJSONArray("choices")
+            .getJSONObject(0)
+            .getJSONObject("message")
+            .getString("content")
 
-        val parsed = try {
-            JSONObject(content)
-        } catch (e: Exception) {
-            // Fallback if JSON parsing of content fails
-            JSONObject().apply {
-                put("message", "Wishing you a wonderful birthday!")
-                put("imagePrompt", "vibrant birthday celebration with balloons and cake, $style style, $interests theme")
-            }
-        }
+        val parsed = JSONObject(content)
 
-        val message = parsed.optString("message", "Have an amazing day!")
-        val imagePrompt = parsed.optString("imagePrompt", "birthday illustration $style $interests")
+        val message = parsed.optString(
+            "message",
+            "Wishing you a wonderful birthday filled with joy!"
+        )
 
-        val encodedPrompt = URLEncoder.encode(imagePrompt, StandardCharsets.UTF_8.toString())
+        val imagePrompt = parsed.optString(
+            "imagePrompt",
+            "beautiful birthday card illustration with cake, balloons and confetti, $style style"
+        )
+
+        val finalImagePrompt = """
+            $imagePrompt,
+            birthday card artwork,
+            no readable text,
+            no letters,
+            no watermark,
+            vibrant,
+            polished,
+            high quality
+        """.trimIndent()
+
+        val encodedPrompt = URLEncoder.encode(
+            finalImagePrompt,
+            StandardCharsets.UTF_8.toString()
+        )
+
         val imageUrl = "https://image.pollinations.ai/prompt/$encodedPrompt"
 
-        AiResult(message, imageUrl)
+        AiResult(
+            message = message,
+            imageUrl = imageUrl
+        )
     }
 }

@@ -11,16 +11,60 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ImageSearch
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,8 +72,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -44,9 +91,20 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
 
-data class CardData(
-    val message: String,
-    val imageUrl: String
+private val PlayfairDisplay = FontFamily(Font(R.font.playfair_display))
+private val EmilysCandy = FontFamily(Font(R.font.emilys_candy))
+private val DynaPuff = FontFamily(Font(R.font.dyna_puff))
+private val LondrinaShadow = FontFamily(Font(R.font.lodrina_shadow))
+private val ElmsSands = FontFamily(Font(R.font.elms_sands))
+
+private data class CardFontStyle(
+    val label: String,
+    val fontFamily: FontFamily,
+    val headlineWeight: FontWeight,
+    val messageWeight: FontWeight,
+    val titleSize: TextUnit,
+    val nameSize: TextUnit,
+    val messageSize: TextUnit
 )
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -58,87 +116,145 @@ fun AiGreetingCardScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    var isGenerating by remember { mutableStateOf(false) }
-    var generatedCard by remember { mutableStateOf<CardData?>(null) }
-
-    var interests by remember { mutableStateOf(contact.tags.joinToString(", ")) }
-    var selectedStyle by remember { mutableStateOf("3D Render") }
-    var editedMessage by remember {
-        mutableStateOf("Wishing you a wonderful birthday filled with joy!")
+    val pixabayService = remember {
+        PixabayService(BuildConfig.PIXABAY_API_KEY)
     }
-
-    val styles = listOf(
-        "3D Render",
-        "Cartoon",
-        "Sketch",
-        "Watercolor",
-        "Anime",
-        "Cyberpunk",
-        "Minimalist"
-    )
 
     val firstName = remember(contact.name) {
         contact.name.trim().split("\\s+".toRegex()).firstOrNull() ?: contact.name
     }
 
-    val aiService = remember {
-        if (BuildConfig.GEMINI_API_KEY.isNotEmpty()) {
-            GeminiAiService(
-                apiKey = BuildConfig.GEMINI_API_KEY,
-                modelName = BuildConfig.GEMINI_MODEL_NAME
-            )
-        } else {
-            OpenAiService(BuildConfig.OPENAI_API_KEY)
-        }
+    val categories = listOf(
+        "cute birthday illustration",
+        "birthday card illustration",
+        "cartoon birthday",
+        "elegant birthday illustration",
+        "birthday cake illustration",
+        "balloons birthday illustration"
+    )
+
+    val fontStyles = listOf(
+        CardFontStyle(
+            label = "Elegant",
+            fontFamily = PlayfairDisplay,
+            headlineWeight = FontWeight.SemiBold,
+            messageWeight = FontWeight.Normal,
+            titleSize = 35.sp,
+            nameSize = 34.sp,
+            messageSize = 18.sp
+        ),
+        CardFontStyle(
+            label = "Cute",
+            fontFamily = EmilysCandy,
+            headlineWeight = FontWeight.Normal,
+            messageWeight = FontWeight.Normal,
+            titleSize = 38.sp,
+            nameSize = 36.sp,
+            messageSize = 19.sp
+        ),
+        CardFontStyle(
+            label = "Fun",
+            fontFamily = DynaPuff,
+            headlineWeight = FontWeight.Bold,
+            messageWeight = FontWeight.Normal,
+            titleSize = 38.sp,
+            nameSize = 36.sp,
+            messageSize = 18.sp
+        ),
+        CardFontStyle(
+            label = "Shadow",
+            fontFamily = LondrinaShadow,
+            headlineWeight = FontWeight.Normal,
+            messageWeight = FontWeight.Normal,
+            titleSize = 44.sp,
+            nameSize = 40.sp,
+            messageSize = 20.sp
+        ),
+        CardFontStyle(
+            label = "Simple",
+            fontFamily = ElmsSands,
+            headlineWeight = FontWeight.Bold,
+            messageWeight = FontWeight.Normal,
+            titleSize = 36.sp,
+            nameSize = 34.sp,
+            messageSize = 19.sp
+        )
+    )
+
+    var selectedCategory by remember { mutableStateOf(categories.first()) }
+    var selectedFontStyle by remember { mutableStateOf(fontStyles.first()) }
+    var customSearch by remember { mutableStateOf("") }
+    var images by remember { mutableStateOf<List<PixabayImage>>(emptyList()) }
+    var selectedImage by remember { mutableStateOf<PixabayImage?>(null) }
+    var message by remember {
+        mutableStateOf("Wishing you a birthday filled with love, laughter and lovely memories.")
     }
+    var isLoading by remember { mutableStateOf(false) }
+    var page by remember { mutableIntStateOf(1) }
 
-    fun generateCard() {
-        if (isGenerating) return
+    fun searchImages(resetPage: Boolean = true) {
+        if (isLoading) return
 
-        isGenerating = true
+        val query = customSearch.ifBlank { selectedCategory }
+
+        if (resetPage) {
+            page = 1
+        }
+
+        isLoading = true
 
         scope.launch {
             try {
-                Log.d("AIGreetingCard", "🚀 Generating card with AI service")
-
-                val result = aiService.generateCard(
-                    name = firstName,
-                    interests = interests,
-                    style = selectedStyle
+                val result = pixabayService.searchImages(
+                    query = query,
+                    page = page
                 )
 
-                generatedCard = CardData(
-                    message = result.message,
-                    imageUrl = result.imageUrl
-                )
+                images = result
+                selectedImage = result.firstOrNull()
 
-                editedMessage = result.message
-
-                Log.d("AIGreetingCard", "✅ Design generated successfully")
-
+                if (result.isEmpty()) {
+                    Toast.makeText(
+                        context,
+                        "No images found. Try another style.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
             } catch (e: Exception) {
-                Log.e("AIGreetingCard", "❌ Generation failed", e)
+                Log.e("PixabayCard", "Image search failed", e)
 
                 Toast.makeText(
                     context,
-                    "AI generation failed. Check Logcat.",
+                    e.message ?: "Image search failed",
                     Toast.LENGTH_LONG
                 ).show()
             } finally {
-                isGenerating = false
+                isLoading = false
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        searchImages(resetPage = true)
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI Designer Playground") },
+                title = { Text("Birthday Card Maker") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { searchImages(resetPage = true) }) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh images"
                         )
                     }
                 }
@@ -153,40 +269,66 @@ fun AiGreetingCardScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GreetingCardPreview(
+            BirthdayCardPreview(
                 name = firstName,
-                data = generatedCard,
-                displayMessage = editedMessage,
-                isGenerating = isGenerating
+                message = message,
+                image = selectedImage,
+                isLoading = isLoading,
+                fontStyle = selectedFontStyle
             )
 
             OutlinedTextField(
-                value = editedMessage,
-                onValueChange = { editedMessage = it },
+                value = message,
+                onValueChange = { message = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Personalize Message") },
-                placeholder = { Text("Enter a custom message...") },
+                label = { Text("Card message") },
+                placeholder = { Text("Write your birthday message...") },
                 shape = RoundedCornerShape(16.dp),
-                maxLines = 3
+                maxLines = 4
             )
 
-            if (generatedCard != null && !isGenerating) {
+            Text(
+                text = "Font style",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                fontStyles.forEach { style ->
+                    FilterChip(
+                        selected = selectedFontStyle.label == style.label,
+                        onClick = { selectedFontStyle = style },
+                        label = { Text(style.label) },
+                        shape = CircleShape
+                    )
+                }
+            }
+
+            if (selectedImage != null && !isLoading) {
+                val imageForActions = selectedImage
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
                         onClick = {
+                            if (imageForActions == null) return@Button
+
                             scope.launch {
-                                val uri = downloadAndSaveImageToCache(
+                                val uri = downloadImageToCache(
                                     context = context,
-                                    url = generatedCard!!.imageUrl
+                                    url = imageForActions.imageUrl
                                 )
 
-                                shareCardWithImage(
+                                shareCard(
                                     context = context,
                                     name = firstName,
-                                    message = editedMessage,
+                                    message = message,
                                     imageUri = uri
                                 )
                             }
@@ -204,10 +346,12 @@ fun AiGreetingCardScreen(
 
                     OutlinedButton(
                         onClick = {
+                            if (imageForActions == null) return@OutlinedButton
+
                             scope.launch {
                                 saveImageToGallery(
                                     context = context,
-                                    url = generatedCard!!.imageUrl
+                                    url = imageForActions.imageUrl
                                 )
                             }
                         },
@@ -220,113 +364,147 @@ fun AiGreetingCardScreen(
                     }
                 }
 
+                selectedImage?.let { image ->
+                    Text(
+                        text = "Image by ${image.user} on Pixabay",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Divider(
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(vertical = 4.dp),
                     thickness = 0.5.dp
                 )
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(
-                    text = "Redesign Options",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+            Text(
+                text = "Choose an image style",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
 
-                OutlinedTextField(
-                    value = interests,
-                    onValueChange = { interests = it },
-                    label = { Text("Interests (e.g. Pokemon, Music, Pizza)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                )
-
-                Text(
-                    text = "Art Style",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    styles.forEach { style ->
-                        FilterChip(
-                            selected = selectedStyle == style,
-                            onClick = { selectedStyle = style },
-                            label = { Text(style) },
-                            shape = CircleShape
-                        )
-                    }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                categories.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = {
+                            selectedCategory = category
+                            customSearch = ""
+                            searchImages(resetPage = true)
+                        },
+                        label = { Text(category.replaceFirstChar { it.uppercase() }) },
+                        shape = CircleShape
+                    )
                 }
             }
 
+            OutlinedTextField(
+                value = customSearch,
+                onValueChange = { customSearch = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Or search for your own theme") },
+                placeholder = { Text("e.g. dinosaurs birthday, princess party...") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.ImageSearch,
+                        contentDescription = null
+                    )
+                },
+                shape = RoundedCornerShape(16.dp),
+                singleLine = true
+            )
+
             Button(
-                onClick = { generateCard() },
+                onClick = { searchImages(resetPage = true) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                enabled = !isGenerating,
+                    .height(54.dp),
+                enabled = !isLoading,
                 shape = RoundedCornerShape(16.dp)
             ) {
-                if (isGenerating) {
+                if (isLoading) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(22.dp),
                         color = Color.White
                     )
-                    Spacer(Modifier.width(12.dp))
-                    Text("Designing...")
+                    Spacer(Modifier.width(10.dp))
+                    Text("Finding images...")
                 } else {
-                    Icon(Icons.Default.Brush, contentDescription = null)
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = if (generatedCard == null) "Create Card" else "Regenerate",
-                        fontSize = 16.sp
+                    Icon(Icons.Default.ImageSearch, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Find Images")
+                }
+            }
+
+            Text(
+                text = "Tap an image to use it",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(420.dp),
+                contentPadding = PaddingValues(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(images, key = { it.id }) { image ->
+                    ImageChoiceTile(
+                        image = image,
+                        selected = selectedImage?.id == image.id,
+                        onClick = { selectedImage = image }
                     )
                 }
+            }
+
+            OutlinedButton(
+                onClick = {
+                    page += 1
+                    searchImages(resetPage = false)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isLoading,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text("Load More Images")
             }
         }
     }
 }
 
 @Composable
-fun GreetingCardPreview(
+private fun BirthdayCardPreview(
     name: String,
-    data: CardData?,
-    displayMessage: String,
-    isGenerating: Boolean
+    message: String,
+    image: PixabayImage?,
+    isLoading: Boolean,
+    fontStyle: CardFontStyle
 ) {
-    val backgroundBrush = Brush.verticalGradient(
-        listOf(
-            Color(0xFF1A1C1E),
-            Color(0xFF000000)
-        )
-    )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(0.85f)
             .clip(RoundedCornerShape(32.dp)),
-        elevation = CardDefaults.cardElevation(20.dp)
+        elevation = CardDefaults.cardElevation(18.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(backgroundBrush)
+                .background(Color.Black)
         ) {
-            if (data != null && data.imageUrl.isNotEmpty()) {
+            if (image != null) {
                 SubcomposeAsyncImage(
-                    model = data.imageUrl,
+                    model = image.imageUrl,
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
@@ -346,8 +524,8 @@ fun GreetingCardPreview(
                             Icon(
                                 imageVector = Icons.Default.BrokenImage,
                                 contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.size(48.dp)
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(54.dp)
                             )
                         }
                     }
@@ -361,65 +539,74 @@ fun GreetingCardPreview(
                         Brush.verticalGradient(
                             listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.8f)
+                                Color.Black.copy(alpha = 0.84f)
                             )
                         )
                     )
                     .padding(24.dp),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                if (isGenerating) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
+                when {
+                    isLoading && image == null -> {
                         CircularProgressIndicator(color = Color.White)
                     }
-                } else if (data == null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.2f),
-                            modifier = Modifier.size(80.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = "Ready to create something special",
-                            color = Color.White.copy(alpha = 0.4f)
-                        )
+
+                    image == null -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ImageSearch,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.45f),
+                                modifier = Modifier.size(80.dp)
+                            )
+
+                            Spacer(Modifier.height(16.dp))
+
+                            Text(
+                                text = "Choose an image to start",
+                                color = Color.White.copy(alpha = 0.8f),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "HAPPY BIRTHDAY",
-                            style = MaterialTheme.typography.displaySmall,
-                            color = Color.White,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 2.sp,
-                            textAlign = TextAlign.Center
-                        )
 
-                        Text(
-                            text = name.uppercase(),
-                            style = MaterialTheme.typography.headlineLarge,
-                            color = Color.White,
-                            fontWeight = FontWeight.Light,
-                            textAlign = TextAlign.Center
-                        )
+                    else -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Happy Birthday",
+                                color = Color.White,
+                                fontFamily = fontStyle.fontFamily,
+                                fontWeight = fontStyle.headlineWeight,
+                                fontSize = fontStyle.titleSize,
+                                letterSpacing = 1.sp,
+                                textAlign = TextAlign.Center
+                            )
 
-                        Spacer(Modifier.height(12.dp))
+                            Text(
+                                text = name,
+                                color = Color.White,
+                                fontFamily = fontStyle.fontFamily,
+                                fontWeight = fontStyle.headlineWeight,
+                                fontSize = fontStyle.nameSize,
+                                textAlign = TextAlign.Center
+                            )
 
-                        Text(
-                            text = displayMessage,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White.copy(alpha = 0.9f),
-                            lineHeight = 24.sp
-                        )
+                            Spacer(Modifier.height(12.dp))
+
+                            Text(
+                                text = message,
+                                textAlign = TextAlign.Center,
+                                color = Color.White.copy(alpha = 0.96f),
+                                fontFamily = fontStyle.fontFamily,
+                                fontWeight = fontStyle.messageWeight,
+                                fontSize = fontStyle.messageSize,
+                                lineHeight = 25.sp
+                            )
+                        }
                     }
                 }
             }
@@ -427,20 +614,79 @@ fun GreetingCardPreview(
     }
 }
 
-private suspend fun downloadAndSaveImageToCache(
+@Composable
+private fun ImageChoiceTile(
+    image: PixabayImage,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .aspectRatio(0.75f)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (selected) 8.dp else 2.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(if (selected) 3.dp else 0.dp)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            SubcomposeAsyncImage(
+                model = image.previewUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                loading = {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                },
+                error = {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.BrokenImage,
+                            contentDescription = null
+                        )
+                    }
+                }
+            )
+        }
+    }
+}
+
+private suspend fun downloadImageToCache(
     context: android.content.Context,
     url: String
 ): Uri? {
     return withContext(Dispatchers.IO) {
         try {
             val loader = ImageLoader(context)
-
             val request = ImageRequest.Builder(context)
                 .data(url)
                 .build()
 
-            val result = (loader.execute(request) as? SuccessResult)?.drawable
-            val bitmap = (result as? BitmapDrawable)?.bitmap ?: return@withContext null
+            val result = loader.execute(request) as? SuccessResult
+            val bitmap = (result?.drawable as? BitmapDrawable)?.bitmap
+                ?: return@withContext null
 
             val cachePath = File(context.cacheDir, "images")
             cachePath.mkdirs()
@@ -457,7 +703,7 @@ private suspend fun downloadAndSaveImageToCache(
                 file
             )
         } catch (e: Exception) {
-            Log.e("AIGreetingCard", "Share image cache failed", e)
+            Log.e("PixabayCard", "Image cache failed", e)
             null
         }
     }
@@ -470,13 +716,12 @@ private suspend fun saveImageToGallery(
     withContext(Dispatchers.IO) {
         try {
             val loader = ImageLoader(context)
-
             val request = ImageRequest.Builder(context)
                 .data(url)
                 .build()
 
-            val result = (loader.execute(request) as? SuccessResult)?.drawable
-            val bitmap = (result as? BitmapDrawable)?.bitmap
+            val result = loader.execute(request) as? SuccessResult
+            val bitmap = (result?.drawable as? BitmapDrawable)?.bitmap
                 ?: throw Exception("Failed to load image")
 
             val filename = "birthday_card_${System.currentTimeMillis()}.png"
@@ -486,7 +731,10 @@ private suspend fun saveImageToGallery(
                     val contentValues = ContentValues().apply {
                         put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
                         put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-                        put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES)
+                        put(
+                            MediaStore.MediaColumns.RELATIVE_PATH,
+                            Environment.DIRECTORY_PICTURES
+                        )
                     }
 
                     val imageUri = context.contentResolver.insert(
@@ -501,9 +749,8 @@ private suspend fun saveImageToGallery(
                     val imagesDir = Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_PICTURES
                     )
-
-                    val image = File(imagesDir, filename)
-                    FileOutputStream(image)
+                    val imageFile = File(imagesDir, filename)
+                    FileOutputStream(imageFile)
                 }
 
             outputStream?.use {
@@ -513,9 +760,8 @@ private suspend fun saveImageToGallery(
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, "Saved to Pictures", Toast.LENGTH_SHORT).show()
             }
-
         } catch (e: Exception) {
-            Log.e("AIGreetingCard", "Save image failed", e)
+            Log.e("PixabayCard", "Save image failed", e)
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(
@@ -528,7 +774,7 @@ private suspend fun saveImageToGallery(
     }
 }
 
-private fun shareCardWithImage(
+private fun shareCard(
     context: android.content.Context,
     name: String,
     message: String,

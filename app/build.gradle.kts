@@ -23,23 +23,15 @@ android {
         versionCode = 20
         versionName = "2.9"
 
-        buildConfigField(
-            "String",
-            "OPENAI_API_KEY",
-            "\"${project.findProperty("OPENAI_API_KEY") ?: ""}\""
-        )
+        val openAiKey = project.findProperty("OPENAI_API_KEY") as String? ?: ""
+        val geminiKey = project.findProperty("GEMINI_API_KEY") as String? ?: ""
+        val geminiModel = project.findProperty("GEMINI_MODEL_NAME") as String? ?: ""
+        val pixabayKey = project.findProperty("PIXABAY_API_KEY") as String? ?: ""
 
-        buildConfigField(
-            "String",
-            "GEMINI_API_KEY",
-            "\"${project.findProperty("GEMINI_API_KEY") ?: ""}\""
-        )
-
-        buildConfigField(
-            "String",
-            "GEMINI_MODEL_NAME",
-            "\"gemini-1.5-flash\""
-        )
+        buildConfigField("String", "OPENAI_API_KEY", "\"$openAiKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiKey\"")
+        buildConfigField("String", "GEMINI_MODEL_NAME", "\"$geminiModel\"")
+        buildConfigField("String", "PIXABAY_API_KEY", "\"$pixabayKey\"")
     }
 
     buildFeatures {
